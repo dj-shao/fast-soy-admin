@@ -92,6 +92,6 @@ class Settings(BaseSettings):
 APP_SETTINGS = Settings()
 TORTOISE_ORM = APP_SETTINGS.TORTOISE_ORM
 
-# Ensure required directories exist
+# 确保必要目录存在
 for _dir in [APP_SETTINGS.LOGS_ROOT, APP_SETTINGS.STATIC_ROOT, APP_SETTINGS.BASE_DIR / "migrations"]:
     _dir.mkdir(parents=True, exist_ok=True)

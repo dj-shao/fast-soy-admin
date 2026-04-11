@@ -25,12 +25,12 @@ _ALL_ROUTES = ("list", "get", "create", "update", "delete", "batch_delete")
 
 
 class _OrderedRouter(APIRouter):
-    """APIRouter that keeps static routes before parameterized routes.
+    """保持静态路由排在参数化路由前面的 APIRouter。
 
-    Prevents ``GET /resources/{item_id}`` from shadowing later-added static
-    routes like ``GET /resources/pages``.  After every ``add_api_route`` call
-    the route list is re-sorted so that paths without ``{…}`` come first
-    (Python's stable sort preserves relative order within each group).
+    防止 ``GET /resources/{item_id}`` 遮蔽后续添加的静态路由（如
+    ``GET /resources/pages``）。每次调用 ``add_api_route`` 后都会对路由列表
+    重新排序，使不含 ``{…}`` 的路径排在前面（Python 的稳定排序会保留
+    同组内的相对顺序）。
     """
 
     def add_api_route(self, path: str, *args, **kwargs) -> None:  # type: ignore[override]
@@ -130,13 +130,13 @@ class CRUDRouter:
         self.exclude_fields = exclude_fields or []
         self.record_transform = record_transform
 
-        # 资源名（从 prefix 提取，如 "/roles" -> "roles"）
+        # 资源名（从 prefix 提取，如 "/roles" → "roles"）
         self._resource = prefix.strip("/").split("/")[-1]
 
         self.enable_routes: set[str] = enable_routes if enable_routes is not None else set(_ALL_ROUTES)
 
         # 存储每个标准路由的规格：name -> {"path", "methods", "summary"}
-        # override() 会根据 name 找到对应规格，再用用户函数替换默认实现
+        # override() 根据 name 找到对应规格，再用用户函数替换默认实现
         self._route_specs: dict[str, dict] = {}
 
         self.router = _OrderedRouter()
@@ -191,11 +191,11 @@ class CRUDRouter:
         return decorator
 
     def _remove_route(self, path: str, methods: set[str]) -> None:
-        """从 self.router.routes 中移除匹配 (path, methods) 的默认路由。"""
+        """从 router.routes 中移除匹配 (path, methods) 的默认路由。"""
         self.router.routes = [r for r in self.router.routes if not (isinstance(r, APIRoute) and r.path == path and set(r.methods) == methods)]
 
     def _register_spec(self, name: str, path: str, methods: set[str], summary: str, endpoint: Callable) -> None:
-        """登记路由规格并实际挂到 router 上。"""
+        """登记路由规格并将其挂载到 router 上。"""
         self._route_specs[name] = {"path": path, "methods": methods, "summary": summary}
         self.router.add_api_route(path, endpoint, methods=list(methods), summary=summary)
 

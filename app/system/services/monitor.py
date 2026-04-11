@@ -1,4 +1,4 @@
-"""System metrics collector using psutil."""
+"""基于 psutil 的系统指标采集器。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import psutil  # type: ignore[import-untyped]
 
 
 class ServerInfoCollector:
-    """Collects system metrics: CPU, memory, disk, network, processes."""
+    """系统指标采集器，采集 CPU、内存、磁盘、网络、进程等信息。"""
 
     def __init__(self) -> None:
         self._last_net_io: Any = None
@@ -55,7 +55,7 @@ class ServerInfoCollector:
         except Exception:
             counters = None
 
-        # Disk usage percentage
+        # 磁盘使用率
         try:
             disk_usage = psutil.disk_usage("/")
             usage_percent = disk_usage.percent
@@ -92,7 +92,7 @@ class ServerInfoCollector:
         now = time.monotonic()
         net = psutil.net_io_counters()
 
-        # Active network connections count
+        # 活跃网络连接数
         try:
             connections = psutil.net_connections(kind="inet")
             active_connections = sum(1 for c in connections if c.status == "ESTABLISHED")
@@ -128,7 +128,7 @@ class ServerInfoCollector:
         boot_dt = datetime.fromtimestamp(boot)
         uptime_seconds = int(time.time() - boot)
 
-        # Load average
+        # 负载均值
         try:
             load = psutil.getloadavg()
             load_1, load_5, load_15 = round(load[0], 2), round(load[1], 2), round(load[2], 2)
@@ -137,7 +137,7 @@ class ServerInfoCollector:
             cores = psutil.cpu_count() or 1
             load_1 = load_5 = load_15 = round(cpu_pct * cores, 2)
 
-        # Process counts
+        # 进程数统计
         total_procs = 0
         running = 0
         sleeping = 0
@@ -152,7 +152,7 @@ class ServerInfoCollector:
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
 
-        # Users
+        # 在线用户
         users = psutil.users()
 
         return {
@@ -170,7 +170,7 @@ class ServerInfoCollector:
         }
 
     def get_network_trend(self) -> dict:
-        """Get current network I/O snapshot for trend building on frontend."""
+        """获取当前网络 I/O 快照，供前端构建趋势图使用。"""
         net = psutil.net_io_counters()
         if net is None:
             return {"bytes_sent": 0, "bytes_recv": 0, "timestamp": datetime.now().strftime("%H:%M:%S")}
@@ -265,5 +265,5 @@ class ServerInfoCollector:
         return " ".join(parts)
 
 
-# Singleton instance
+# 全局单例
 collector = ServerInfoCollector()

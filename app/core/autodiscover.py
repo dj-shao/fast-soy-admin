@@ -1,23 +1,23 @@
 """
-Auto-discovery mechanism for business modules.
+业务模块自动发现机制。
 
-Scans app/business/*/ for self-contained business modules. Each module can provide:
-- models.py (or models/)    → Tortoise ORM registration
-- api.py (or api/)          → FastAPI routers (must export `router`)
-- init_data.py              → Startup data init (must export `async def init()`)
+扫描 app/business/*/ 下的独立业务模块。每个模块可提供：
+- models.py（或 models/）    → Tortoise ORM 模型注册
+- api.py（或 api/）          → FastAPI 路由（必须导出 `router`）
+- init_data.py               → 启动时数据初始化（必须导出 `async def init()`）
 
-Convention:
-- Each subdirectory under app/business/ with __init__.py is a business module
-- Directories starting with `_` are skipped
+约定：
+- app/business/ 下含 __init__.py 的子目录即为业务模块
+- 以 `_` 开头的目录将被跳过
 
-Example structure:
+目录结构示例：
     app/business/hr/
     ├── __init__.py
     ├── config.py, ctx.py, dependency.py
     ├── models.py, schemas.py, controllers.py, services.py
     ├── init_data.py
     └── api/
-        ├── __init__.py  (exports router)
+        ├── __init__.py  (导出 router)
         ├── manage.py
         └── my.py
 """
@@ -28,34 +28,34 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
-# NOTE: ``app.core.log`` is imported lazily inside ``discover_business_init_data``
-# to avoid a circular import (``config.py`` calls ``discover_business_models()``
-# during ``Settings()`` construction, and ``log.py`` depends on ``config.py``).
+# NOTE: ``app.core.log`` 在 ``discover_business_init_data`` 内部延迟导入，
+# 以避免循环导入（``config.py`` 在构建 ``Settings()`` 时会调用 ``discover_business_models()``，
+# 而 ``log.py`` 又依赖 ``config.py``）。
 
 BUSINESS_ROOT = Path(__file__).resolve().parent.parent / "business"
 
 
 def _discover_modules() -> list[str]:
-    """Find all business module names under app/business/."""
+    """获取 app/business/ 下所有业务模块名称。"""
     if not BUSINESS_ROOT.exists():
         return []
     return sorted(p.name for p in BUSINESS_ROOT.iterdir() if p.is_dir() and not p.name.startswith("_") and (p / "__init__.py").exists())
 
 
 def discover_business_models() -> list[str]:
-    """Return model module paths for Tortoise ORM registration."""
+    """返回用于 Tortoise ORM 注册的模型模块路径列表。"""
     model_modules = []
     for name in _discover_modules():
-        # Support both models.py and models/ package
+        # 同时支持 models.py 和 models/ 包两种形式
         if (BUSINESS_ROOT / name / "models.py").exists() or (BUSINESS_ROOT / name / "models" / "__init__.py").exists():
             model_modules.append(f"app.business.{name}.models")
     return model_modules
 
 
 def discover_business_routers() -> tuple[APIRouter, list[str]]:
-    """Auto-discover routers from each business module's api module.
+    """自动发现各业务模块 api 模块中的路由。
 
-    Returns the aggregated router and the list of discovered module names.
+    返回聚合后的路由对象和已发现的模块名称列表。
     """
     parent_router = APIRouter()
     names: list[str] = []
@@ -72,8 +72,8 @@ def discover_business_routers() -> tuple[APIRouter, list[str]]:
 
 
 def discover_business_init_data() -> list[Callable]:
-    """Auto-discover init() functions from each business module's init_data module."""
-    from app.core.log import log  # lazy import — see module docstring note
+    """自动发现各业务模块 init_data 中的 init() 函数。"""
+    from app.core.log import log  # 延迟导入——参见模块 docstring 说明
 
     init_funcs: list[Callable] = []
     for name in _discover_modules():

@@ -34,7 +34,7 @@ class OrderService:
     def _get_discount(product_id: int) -> float:
         discounts = {1001: 0.9, 1002: 0.85, 1003: 0.0}
         rate = discounts.get(product_id, 1.0)
-        # Bug: product 1003 has discount=0.0, will cause division by zero below
+        # Bug：商品 1003 的折扣为 0.0，下方除法将触发除零错误
         return 1.0 / rate
 
     @staticmethod

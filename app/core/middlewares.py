@@ -93,13 +93,13 @@ class PrettyErrorsMiddleware(BaseHTTPMiddleware):
         self.error_buffer = StringIO()
         pretty_errors.configure(**pretty_errors_config)
         pretty_errors.exception_writer = self._ExceptionWriter(self.error_buffer)
-        # Hide framework dispatch layers (noisy, no diagnostic value)
-        # Keeps: project code + third-party library internals (e.g. tortoise, pydantic)
+        # 屏蔽框架调度层（噪音多，无诊断价值）
+        # 保留：项目代码 + 第三方库内部（如 Tortoise、Pydantic）
         self._setup_blacklist()
 
     @staticmethod
     def _setup_blacklist():
-        """Blacklist framework dispatch layers that add noise to tracebacks."""
+        """将会给堆栈跟踪引入噪音的框架调度层加入黑名单。"""
         site_pkg = next((p for p in sys.path if "site-packages" in p), "")
         stdlib = os.path.dirname(os.__file__)
 
@@ -126,17 +126,17 @@ class PrettyErrorsMiddleware(BaseHTTPMiddleware):
 
             msg = f"服务器内部错误, path: {request.url.path}, query: {dict(request.query_params)}"
 
-            # Write colored output to error log file (preserve ANSI colors)
+            # 将带颜色的输出写入错误日志文件（保留 ANSI 颜色）
             error_dir = APP_SETTINGS.LOGS_ROOT / "uncaught"
             error_dir.mkdir(parents=True, exist_ok=True)
             error_file = error_dir / f"{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.log"
             error_file.write_text(f"{msg}\n{output}", encoding="utf-8")
 
-            # Print colored traceback directly to stderr (preserves ANSI colors)
+            # 将带颜色的堆栈跟踪直接打印到 stderr（保留 ANSI 颜色）
             sys.stderr.write(f"{msg}\n{output}\n")
             sys.stderr.flush()
 
-            # Return plain-text output in debug mode (strip ANSI escape codes)
+            # 调试模式下在响应中返回纯文本（去除 ANSI 转义码）
             if APP_SETTINGS.APP_DEBUG:
                 ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
                 details: str | None = ansi_escape.sub("", f"{msg}\n{output}")

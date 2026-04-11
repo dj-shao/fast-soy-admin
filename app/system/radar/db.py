@@ -261,11 +261,11 @@ async def query_stats(hours: int | None = None) -> dict:
 
 
 async def query_dashboard_stats(hours: int = 1) -> dict:
-    """Enhanced dashboard stats with percentiles, trends, and distributions."""
+    """增强版仪表盘统计，包含百分位数、趋势及分布数据。"""
     cutoff = datetime.now() - timedelta(hours=hours)
     base_q = Q(created_at__gte=cutoff)
 
-    # Basic counts
+    # 基础计数
     req_count = await RadarRequest.filter(base_q).count()
     avg_row = await RadarRequest.filter(base_q).annotate(avg_dur=Avg("duration_ms")).first().values("avg_dur")
     avg_duration: float = avg_row["avg_dur"] if avg_row and avg_row.get("avg_dur") is not None else 0
@@ -273,56 +273,56 @@ async def query_dashboard_stats(hours: int = 1) -> dict:
     query_count = await RadarQuery.filter(base_q).count()
     exception_count = await RadarRequest.filter(base_q & Q(response_status__gte=500)).count()
 
-    # Success/error breakdown
+    # 成功 / 失败拆分
     success_count = await RadarRequest.filter(base_q & Q(response_status__lt=400)).count()
     error_rate = round(error_count / req_count * 100, 2) if req_count else 0
     success_rate = round(success_count / req_count * 100, 2) if req_count else 100
 
-    # Response time percentiles (P50, P95, P99)
+    # 响应时间百分位数（P50、P95、P99）
     raw_durations = await RadarRequest.filter(base_q & Q(duration_ms__not_isnull=True)).order_by("duration_ms").values_list("duration_ms", flat=True)
     durations: list[float] = [float(d) for d in raw_durations if d is not None]  # type: ignore[arg-type]
     p50 = _percentile(durations, 50)
     p95 = _percentile(durations, 95)
     p99 = _percentile(durations, 99)
 
-    # Query performance (avg query time)
+    # SQL 查询性能（平均耗时）
     q_avg_row = await RadarQuery.filter(base_q).annotate(avg_dur=Avg("duration_ms")).first().values("avg_dur")
     avg_query_time: float = q_avg_row["avg_dur"] if q_avg_row and q_avg_row.get("avg_dur") is not None else 0
 
-    # Response time trend (buckets by interval)
+    # 响应时间趋势（按时间桶分组）
     trend = await _build_time_trend(cutoff, hours)
 
-    # Query activity trend
+    # SQL 查询活动趋势
     query_activity = await _build_query_activity(cutoff, hours)
 
-    # Business code distribution - parse response_body JSON for "code" field
+    # 业务码分布——解析响应体 JSON 中的 "code" 字段
     code_distribution = await _build_code_distribution(base_q)
 
     return {
-        # Top cards
+        # 顶部卡片
         "total_requests": req_count,
         "avg_response_time": round(avg_duration, 2) if avg_duration else 0,
         "total_queries": query_count,
         "total_exceptions": exception_count,
-        # Performance overview
+        # 性能概览
         "success_rate": success_rate,
         "error_rate": error_rate,
         "rps": round(req_count / (hours * 3600), 2) if req_count else 0,
-        # Response time percentiles
+        # 响应时间百分位数
         "p50": p50,
         "p95": p95,
         "p99": p99,
         "avg_query_time": round(avg_query_time, 2) if avg_query_time else 0,
-        # Business code distribution
+        # 业务码分布
         "distribution": code_distribution,
-        # Trends
+        # 趋势数据
         "response_time_trend": trend,
         "query_activity": query_activity,
     }
 
 
 def _extract_business_code_and_msg(response_body: str | None) -> tuple[str | None, str | None]:
-    """Extract business code and msg from response body JSON."""
+    """从响应体 JSON 中提取业务码和消息。"""
     if not response_body:
         return None, None
     try:
@@ -335,7 +335,7 @@ def _extract_business_code_and_msg(response_body: str | None) -> tuple[str | Non
 
 
 async def _build_code_distribution(base_q: Q) -> list[dict]:
-    """Build business code distribution from response_body JSON."""
+    """从响应体 JSON 构建业务码分布统计。"""
     rows = await RadarRequest.filter(base_q & Q(response_body__not_isnull=True)).values_list("response_body", flat=True)
     counter: dict[str, int] = {}
     no_code_count = 0
@@ -371,7 +371,7 @@ def _percentile(sorted_values: list[float], pct: int) -> float:
 
 
 async def _build_time_trend(cutoff: datetime, hours: int) -> list[dict]:
-    """Build time-bucketed response time trend."""
+    """按时间桶构建响应时间趋势数据。"""
     if hours <= 1:
         bucket_minutes = 5
     elif hours <= 6:
@@ -401,7 +401,7 @@ async def _build_time_trend(cutoff: datetime, hours: int) -> list[dict]:
 
 
 async def _build_query_activity(cutoff: datetime, hours: int) -> list[dict]:
-    """Build time-bucketed query activity."""
+    """按时间桶构建 SQL 查询活动趋势数据。"""
     if hours <= 1:
         bucket_minutes = 5
     elif hours <= 6:

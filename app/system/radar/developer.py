@@ -8,13 +8,13 @@ from app.system.radar.ctx import CTX_RADAR
 
 
 def radar_log(message: str, *, level: str = "INFO", data: dict | None = None) -> None:
-    """Insert a manual log entry into the current request's radar timeline.
+    """向当前请求的 Radar 时间线插入一条手动日志。
 
-    Usage:
+    用法：
         from app.system.radar.developer import radar_log
 
-        radar_log("Order processing started", data={"order_id": 123})
-        radar_log("Payment failed", level="ERROR", data={"reason": "timeout"})
+        radar_log("订单开始处理", data={"order_id": 123})
+        radar_log("支付失败", level="ERROR", data={"reason": "timeout"})
     """
     radar_ctx = CTX_RADAR.get()
     if radar_ctx is None:

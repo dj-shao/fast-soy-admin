@@ -1,14 +1,14 @@
 """
-Business module context variables.
+业务模块上下文变量。
 
-Business-specific context that can be set by middleware or dependencies.
-Usage:
+业务专属上下文，可由中间件或依赖注入函数写入。
+使用方式：
     from app.business.hr.ctx import get_department_id, set_department_id
 
-    # In a dependency or middleware
+    # 在依赖或中间件中设置
     set_department_id(dept_id)
 
-    # In business logic
+    # 在业务逻辑中读取
     dept_id = get_department_id()
 """
 

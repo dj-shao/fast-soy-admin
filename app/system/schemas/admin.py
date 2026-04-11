@@ -9,7 +9,7 @@ from app.core.exceptions import SchemaValidationError
 from app.system.models import IconType, MenuType, StatusType
 
 # ============================================================
-# Role Schemas
+# 角色 Schema
 # ============================================================
 
 
@@ -49,7 +49,7 @@ class RoleUpdateAuthrization(SchemaBase):
 
 
 # ============================================================
-# API Schemas
+# API Schema
 # ============================================================
 
 
@@ -74,7 +74,7 @@ class ApiUpdate(BaseApi): ...
 
 
 # ============================================================
-# Menu Schemas
+# 菜单 Schema
 # ============================================================
 
 

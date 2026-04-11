@@ -27,11 +27,11 @@ try:
 except ImportError:
     raise SettingNotFound("Can not import settings")
 
-# Redis key used to coordinate multi-worker startup init
+# 用于协调多 worker 启动初始化的 Redis 键
 _INIT_LOCK_KEY = "app:init_lock"
 _INIT_DONE_KEY = "app:init_done"
-_INIT_LOCK_TIMEOUT = 120  # seconds — max time one worker holds the lock
-_INIT_WAIT_TIMEOUT = 150  # seconds — max time other workers wait
+_INIT_LOCK_TIMEOUT = 120  # 单位秒 — 单个 worker 持有锁的最长时间
+_INIT_WAIT_TIMEOUT = 150  # 单位秒 — 其他 worker 等待初始化完成的最长时间
 
 
 def create_app() -> FastAPI:
@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
     register_exceptions(_app)
     register_routers(_app, prefix="/api")
 
-    # Auto-discover and register business routes
+    # 自动发现并注册业务模块路由
     business_router, business_names = discover_business_routers()
     if business_router.routes:
         _app.include_router(business_router, prefix="/api/v1/business")
@@ -59,7 +59,7 @@ def create_app() -> FastAPI:
 async def _run_init_data(_app: FastAPI) -> bool:
     """初始化种子数据和缓存。多 worker 下仅由一个进程执行，其余等待完成信号。
 
-    Returns True if this worker was the leader (ran the init).
+    若当前 worker 为主导者（执行了初始化），返回 True，否则返回 False。
     """
     redis = _app.state.redis
 

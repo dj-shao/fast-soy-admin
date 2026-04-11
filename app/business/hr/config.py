@@ -1,13 +1,13 @@
 """
-Business module settings.
+业务模块配置。
 
-Business-specific configuration loaded from .env file.
-Usage:
+从 .env 文件加载业务专属配置。
+使用方式：
     from app.business.hr.config import BIZ_SETTINGS
 
     prefix = BIZ_SETTINGS.EMPLOYEE_NO_PREFIX  # "EMP"
 
-Override in .env:
+在 .env 中覆盖：
     EMPLOYEE_NO_PREFIX=STAFF
     MAX_SKILLS_PER_EMPLOYEE=20
 """

@@ -8,6 +8,7 @@ from app.system.radar.query_capture import install_query_capture, uninstall_quer
 
 
 def setup_radar(app: FastAPI) -> None:
+    """挂载 Radar 路由到 FastAPI 应用，未启用时跳过。"""
     if not RADAR_SETTINGS.RADAR_ENABLED:
         return
 
@@ -15,6 +16,7 @@ def setup_radar(app: FastAPI) -> None:
 
 
 async def startup_radar() -> None:
+    """应用启动时安装 SQL 查询捕获补丁，未启用时跳过。"""
     if not RADAR_SETTINGS.RADAR_ENABLED:
         return
 
@@ -22,6 +24,7 @@ async def startup_radar() -> None:
 
 
 async def shutdown_radar() -> None:
+    """应用关闭时卸载 SQL 查询捕获补丁，未启用时跳过。"""
     if not RADAR_SETTINGS.RADAR_ENABLED:
         return
 

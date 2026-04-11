@@ -16,9 +16,9 @@ class SettingNotFound(Exception):
 
 
 class BizError(Exception):
-    """Base business error — usable in any layer (service, controller, schema, API).
+    """基础业务异常——可在任意层（服务层、控制器、Schema、API）抛出。
 
-    Caught by a single global handler that returns Fail(code=..., msg=...).
+    由全局异常处理器统一捕获，并返回 Fail(code=..., msg=...)。
     """
 
     def __init__(self, code: int | str, msg: str) -> None:
@@ -34,13 +34,13 @@ class BizError(Exception):
 
 
 class SchemaValidationError(BizError):
-    """Raised in Pydantic schema validators.
+    """在 Pydantic Schema 校验器中抛出。
 
-    Not a ValueError, so Pydantic won't catch it — propagates directly to the BizError handler.
+    不继承 ValueError，因此 Pydantic 不会捕获它，会直接透传至 BizError 处理器。
     """
 
 
-# legacy alias
+# 旧版别名
 HTTPException = BizError
 
 

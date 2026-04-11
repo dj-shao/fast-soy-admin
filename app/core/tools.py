@@ -109,7 +109,7 @@ def to_camel_case(x):
 
 def to_upper_camel_case(x):
     """
-    转大驼峰法命名, 全部单词首字母大写, userLoginCount
+    转大驼峰法命名，全部单词首字母大写，例如 UserLoginCount
     :param x:
     :return:
     """
@@ -141,7 +141,7 @@ def _default(obj):
     #     return obj.__str__()
     elif hasattr(obj, "asdict"):
         return obj.asdict()
-    elif hasattr(obj, "_asdict"):  # namedtuple
+    elif hasattr(obj, "_asdict"):  # 命名元组
         return obj._asdict()
     elif hasattr(obj, "__dict__"):
         return obj.__dict__
@@ -150,7 +150,7 @@ def _default(obj):
 
 
 def orjson_dumps(data):
-    # 这里的样式通过 | 的方式叠加， 其实每个对应的是一个数字， 更多的样式可以见上面的 github 链接
+    # 通过 | 叠加多个选项，每个选项本质上是一个数字，更多选项可参考 orjson 官方文档
     option = orjson.OPT_PASSTHROUGH_DATETIME | orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_INDENT_2
     rv = orjson.dumps(data, default=_default, option=option)
     # rv = orjson.dumps(data, default=_default)

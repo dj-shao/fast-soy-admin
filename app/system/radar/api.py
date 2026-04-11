@@ -45,7 +45,7 @@ async def get_request_detail(x_request_id: str):
     if not detail:
         return {"code": "4004", "msg": "Request not found", "data": None}
 
-    # Parse JSON strings back to dicts for display (keys are camelCase from to_dict)
+    # 将 JSON 字符串还原为字典以便展示（to_dict 输出的键为 camelCase）
     for field in ("requestHeaders", "responseHeaders"):
         if detail.get(field) and isinstance(detail[field], str):
             try:

@@ -16,9 +16,9 @@ _list = list  # 避免与 CRUDBase.list 方法名冲突
 
 
 def get_db_conn(model: type[Model]) -> str:
-    """Return the Tortoise connection name configured for a model.
+    """返回模型所配置的 Tortoise 连接名称。
 
-    Prefer this over hard-coding connection names in transactions:
+    在事务中优先使用本函数，避免硬编码连接名：
 
         async with in_transaction(get_db_conn(User)):
             ...

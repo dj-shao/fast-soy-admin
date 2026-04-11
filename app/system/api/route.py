@@ -12,11 +12,12 @@ router = APIRouter()
 
 async def build_route_tree(menus: list[Menu], parent_id: int = 0, simple: bool = False) -> list[dict]:
     """
-    递归生成路由树
-    :param menus:
-    :param parent_id:
-    :param simple: 是否简化返回数据
-    :return:
+    递归生成路由树。
+
+    参数：
+        menus: 菜单对象列表
+        parent_id: 父菜单 ID，默认为 0（顶层）
+        simple: 是否返回简化格式的路由数据
     """
     tree = []
     for menu in menus:

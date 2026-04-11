@@ -21,7 +21,7 @@ from app.system.schemas.login import CredentialsSchema, JWTOut, JWTPayload
 from app.system.security import create_access_token
 
 # ---------------------------------------------------------------------------
-# Token building
+# Token 构建
 # ---------------------------------------------------------------------------
 
 
@@ -55,7 +55,7 @@ async def get_token_version(redis: Redis, user_id: int) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Session invalidation
+# Session 失效
 # ---------------------------------------------------------------------------
 
 
@@ -89,7 +89,7 @@ async def invalidate_users_by_role_codes(redis: Redis, role_codes: list[str]) ->
 
 
 # ---------------------------------------------------------------------------
-# Impersonation
+# 模拟登录（Impersonation）
 # ---------------------------------------------------------------------------
 
 
@@ -114,7 +114,7 @@ async def impersonate_user(redis: Redis, *, target_user_id: int, impersonator_id
 
 
 # ---------------------------------------------------------------------------
-# Login orchestration
+# 登录编排
 # ---------------------------------------------------------------------------
 
 

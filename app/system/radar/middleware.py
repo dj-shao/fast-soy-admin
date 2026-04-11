@@ -61,12 +61,12 @@ class RadarMiddleware:
         if not x_request_id:
             x_request_id = uuid4().hex
 
-        # Extract client IP
+        # 获取客户端 IP
         client_ip = None
         client_info = scope.get("client")
         if client_info:
             client_ip = client_info[0]
-        # Prefer X-Forwarded-For / X-Real-IP from headers
+        # 优先取请求头中的 X-Forwarded-For / X-Real-IP
         for key_bytes, val_bytes in scope.get("headers", []):
             key = key_bytes.decode("latin-1", errors="replace").lower()
             if key == "x-forwarded-for":
@@ -85,7 +85,7 @@ class RadarMiddleware:
             request_headers=_serialize_headers(scope.get("headers", [])),
         )
 
-        # Buffer request body
+        # 缓冲请求体
         body_chunks: list[bytes] = []
         receive_complete = False
 
@@ -98,7 +98,7 @@ class RadarMiddleware:
                     receive_complete = True
             return message
 
-        # Capture response
+        # 捕获响应
         response_headers_raw: list[tuple[bytes, bytes]] = []
         response_body_chunks: list[bytes] = []
 
@@ -126,7 +126,7 @@ class RadarMiddleware:
             should_flush = not flush_only_if_logged or bool(radar_ctx.user_logs)
 
             if should_flush:
-                # Finalize request body
+                # 整理请求体
                 if body_chunks:
                     raw_body = b"".join(body_chunks)
                     try:
@@ -134,7 +134,7 @@ class RadarMiddleware:
                     except Exception:
                         radar_ctx.request_body = f"[binary {len(raw_body)} bytes]"
 
-                # Finalize response
+                # 整理响应数据
                 if response_headers_raw:
                     radar_ctx.response_headers = _serialize_headers(response_headers_raw)
 
@@ -145,7 +145,7 @@ class RadarMiddleware:
                     except Exception:
                         radar_ctx.response_body = f"[binary {len(raw_resp)} bytes]"
 
-                # Flush to radar DB asynchronously
+                # 异步写入 Radar 数据库
                 asyncio.create_task(_safe_flush(radar_ctx))
 
             CTX_RADAR.reset(token)

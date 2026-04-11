@@ -99,7 +99,7 @@ class StatusType(str, Enum):
 class GenderType(str, Enum):
     male = "1"
     female = "2"
-    unknow = "3"  # Soybean上没有
+    unknow = "3"  # Soybean 前端未使用
 
 
 class MenuType(str, Enum):

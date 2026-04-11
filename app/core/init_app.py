@@ -29,12 +29,12 @@ from app.system.radar.middleware import RadarMiddleware
 
 
 async def _guard_response_modifier(response):
-    """Rewrite guard error responses to the project's unified JSON format."""
+    """将 guard 的错误响应改写为项目统一的 JSON 格式。"""
     status = response.status_code
     if status < 400:
         return response
     if status in (404, 405):
-        return response  # let normal routing errors pass through, don't mask as security block
+        return response  # 正常路由错误直接透传，不伪装为安全拦截
     if status == 429:
         code, msg = Code.RATE_LIMITED, "请求过于频繁，请稍后再试"
     elif status == 403 and b"banned" in (response.body or b"").lower():
@@ -49,7 +49,7 @@ async def _guard_response_modifier(response):
 
 
 def _make_guard_config():
-    """Create fastapi-guard SecurityConfig from app settings."""
+    """根据应用配置构建 fastapi-guard 的 SecurityConfig。"""
     return SecurityConfig(
         rate_limit=APP_SETTINGS.GUARD_RATE_LIMIT,
         rate_limit_window=APP_SETTINGS.GUARD_RATE_LIMIT_WINDOW,
@@ -57,15 +57,15 @@ def _make_guard_config():
         auto_ban_duration=APP_SETTINGS.GUARD_AUTO_BAN_DURATION,
         enable_redis=True,
         redis_url=APP_SETTINGS.REDIS_URL,
-        enable_cors=False,  # CORS already handled by CORSMiddleware
+        enable_cors=False,  # CORS 已由 CORSMiddleware 处理
         enforce_https=False,
-        security_headers=None,  # Let nginx handle security headers
+        security_headers=None,  # 安全响应头由 nginx 处理
         custom_log_file=str(APP_SETTINGS.LOGS_ROOT / "guard.log"),
         custom_response_modifier=_guard_response_modifier,
         exclude_paths=["/docs", "/redoc", "/openapi.json", "/favicon.ico", "/static"],
         endpoint_rate_limits={
-            "/api/v1/auth/login": (5, 60),  # 5 requests per 60 seconds
-            "/api/v1/auth/refresh-token": (10, 60),  # 10 requests per 60 seconds
+            "/api/v1/auth/login": (5, 60),  # 每 60 秒最多 5 次请求
+            "/api/v1/auth/refresh-token": (10, 60),  # 每 60 秒最多 10 次请求
         },
     )
 

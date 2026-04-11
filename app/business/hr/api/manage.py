@@ -47,7 +47,7 @@ skill_crud = CRUDRouter(
     summary_prefix="标签",
 )
 
-# 员工的 list / create / update 全部走自定义逻辑
+# 员工的列表/创建/更新均走自定义逻辑
 emp_crud = CRUDRouter(
     prefix="/employees",
     controller=employee_controller,
@@ -76,7 +76,7 @@ async def _list_employees(obj_in: EmployeeSearch):
 router = APIRouter(prefix="/hr", tags=["HR管理"], dependencies=[DependPermission])
 
 
-# 具体路径定义在参数化路由（{item_id}）之前，避免路由冲突
+# 将具体路径定义在参数化路由（{item_id}）之前，以避免路由匹配冲突
 @router.get("/departments/stats", summary="部门统计")
 async def dept_stats():
     stats = await get_department_stats()
@@ -88,7 +88,7 @@ router.include_router(skill_crud.router)
 router.include_router(emp_crud.router)
 
 
-# ---- 员工创建 / 更新：独立走 service，依赖 B_HR_CREATE 按钮权限 ----
+# ---- 员工创建/更新：独立走 service 层，依赖 B_HR_CREATE 按钮权限 ----
 
 
 @router.post(
@@ -98,9 +98,9 @@ router.include_router(emp_crud.router)
 )
 async def create_emp(emp_in: EmployeeCreate, request: Request):
     """
-    超管: 需指定 department_id
-    主管(B_HR_CREATE): department 自动继承
-    共同: 自动创建系统用户(R_USER, must_change_password=True), 密码随机生成返回前端
+    超级管理员：须指定 department_id
+    部门主管（B_HR_CREATE）：department 自动继承
+    共同逻辑：自动创建系统用户（R_USER，must_change_password=True），密码随机生成并返回给前端
     """
     current_emp = await employee_controller.get_or_none(user_id=CTX_USER_ID.get())
     return await create_employee(emp_in, current_emp, request.app.state.redis)

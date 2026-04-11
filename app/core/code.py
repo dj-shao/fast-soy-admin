@@ -1,14 +1,14 @@
 """
-Categorized business response codes.
+业务响应码分类定义。
 
-Code ranges:
-  0000        — Success
-  1000-1999   — System internal errors (exception captures)
-  2000-2999   — Business logic errors (auth, permission, resource, etc.)
-  3000-3999   — Internal reserved
-  4000-9999   — User business custom (framework does NOT use)
+码段说明：
+  0000        — 成功
+  1000-1999   — 系统内部错误（异常捕获）
+  2000-2999   — 业务逻辑错误（认证、权限、资源等）
+  3000-3999   — 内部保留
+  4000-9999   — 用户自定义业务码（框架不使用）
 
-Frontend .env mapping:
+前端 .env 映射：
   VITE_SERVICE_SUCCESS_CODE=0000
   VITE_SERVICE_LOGOUT_CODES=2100,2101
   VITE_SERVICE_MODAL_LOGOUT_CODES=2102
@@ -17,49 +17,49 @@ Frontend .env mapping:
 
 
 class Code:
-    """Categorized response codes for the entire application."""
+    """全应用统一响应码分类定义。"""
 
-    # ---- 0000 Success ----
+    # ---- 0000 成功 ----
     SUCCESS = "0000"
 
-    # ==== 1xxx System Internal Errors ====
+    # ==== 1xxx 系统内部错误 ====
 
-    # 10xx — Server errors
-    INTERNAL_ERROR = "1000"  # generic / unhandled exception
+    # 10xx — 服务器错误
+    INTERNAL_ERROR = "1000"  # 通用/未处理异常
 
-    # 11xx — Database errors
-    INTEGRITY_ERROR = "1100"  # constraint violation (unique, FK, etc.)
-    NOT_FOUND = "1101"  # record does not exist
+    # 11xx — 数据库错误
+    INTEGRITY_ERROR = "1100"  # 约束冲突（唯一键、外键等）
+    NOT_FOUND = "1101"  # 记录不存在
 
-    # 12xx — Validation errors
-    REQUEST_VALIDATION = "1200"  # request params / body validation failed
-    RESPONSE_VALIDATION = "1201"  # response serialization failed
+    # 12xx — 数据校验错误
+    REQUEST_VALIDATION = "1200"  # 请求参数/请求体校验失败
+    RESPONSE_VALIDATION = "1201"  # 响应序列化失败
 
-    # ==== 2xxx Business Logic Errors ====
+    # ==== 2xxx 业务逻辑错误 ====
 
-    # 21xx — Authentication
-    INVALID_TOKEN = "2100"  # token missing / decode error / invalid
-    INVALID_SESSION = "2101"  # wrong token type / user not found
-    ACCOUNT_DISABLED = "2102"  # user account has been disabled
-    TOKEN_EXPIRED = "2103"  # access / refresh token expired
+    # 21xx — 认证
+    INVALID_TOKEN = "2100"  # Token 缺失/解码失败/无效
+    INVALID_SESSION = "2101"  # Token 类型错误/用户不存在
+    ACCOUNT_DISABLED = "2102"  # 用户账号已被禁用
+    TOKEN_EXPIRED = "2103"  # 访问/刷新 Token 已过期
 
-    # 22xx — Authorization
-    API_DISABLED = "2200"  # API endpoint has been disabled
-    PERMISSION_DENIED = "2201"  # RBAC permission denied
+    # 22xx — 授权
+    API_DISABLED = "2200"  # API 接口已被禁用
+    PERMISSION_DENIED = "2201"  # RBAC 权限不足
 
-    # 23xx — Resource conflicts
-    DUPLICATE_RESOURCE = "2300"  # duplicate resource (username, role code, etc.)
+    # 23xx — 资源冲突
+    DUPLICATE_RESOURCE = "2300"  # 资源重复（用户名、角色编码等）
 
-    # 24xx — General business failure
-    FAIL = "2400"  # generic business logic failure
+    # 24xx — 通用业务失败
+    FAIL = "2400"  # 通用业务逻辑失败
 
-    # 25xx — Rate limiting / security
-    RATE_LIMITED = "2500"  # too many requests
-    IP_BANNED = "2501"  # IP temporarily banned
-    ACCESS_DENIED = "2502"  # blocked by security guard
+    # 25xx — 限流/安全
+    RATE_LIMITED = "2500"  # 请求过于频繁
+    IP_BANNED = "2501"  # IP 已被临时封禁
+    ACCESS_DENIED = "2502"  # 被安全策略拦截
 
-    # ==== 3xxx Internal Reserved ====
-    # (not used yet, reserved for future framework extensions)
+    # ==== 3xxx 内部保留 ====
+    # （暂未使用，为未来框架扩展预留）
 
-    # ==== 4000-9999 User Business Custom ====
-    # (framework does NOT use — available for project-specific business codes)
+    # ==== 4000-9999 用户自定义业务码 ====
+    # （框架不使用——供项目专属业务逻辑使用）

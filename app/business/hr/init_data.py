@@ -181,7 +181,7 @@ def _employee_no(serial: int) -> str:
 
 
 def _collect_declared_routes(children: list[dict]) -> set[str]:
-    """递归收集 HR_MENU_CHILDREN 里所有 route_name（含任意层级 children）。"""
+    """递归收集 HR_MENU_CHILDREN 中所有层级的 route_name。"""
     result: set[str] = set()
     for item in children:
         result.add(item["route_name"])
@@ -191,7 +191,7 @@ def _collect_declared_routes(children: list[dict]) -> set[str]:
 
 
 def _collect_declared_buttons(children: list[dict]) -> set[str]:
-    """递归收集 HR_MENU_CHILDREN 里所有 button_code。"""
+    """递归收集 HR_MENU_CHILDREN 中所有层级的 button_code。"""
     result: set[str] = set()
     for item in children:
         for btn in item.get("buttons") or []:

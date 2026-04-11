@@ -10,7 +10,7 @@ from tortoise.backends.sqlite.client import SqliteClient, SqliteTransactionWrapp
 
 from app.system.radar.ctx import CTX_RADAR
 
-# Recursion guard: set to True when radar itself is writing to DB
+# 递归防护：Radar 自身写入 DB 时设为 True，避免捕获自身产生的 SQL
 CTX_RADAR_WRITING: contextvars.ContextVar[bool] = contextvars.ContextVar("radar_writing", default=False)
 
 _originals: dict[str, Any] = {}
@@ -87,7 +87,7 @@ def _make_patched_many(original: Any) -> Any:
 
 def install_query_capture() -> None:
     if _originals:
-        return  # Already installed
+        return  # 已安装，跳过
 
     for cls in (SqliteClient, SqliteTransactionWrapper):
         cls_name = cls.__name__
