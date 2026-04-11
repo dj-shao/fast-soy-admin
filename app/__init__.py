@@ -35,7 +35,7 @@ _INIT_WAIT_TIMEOUT = 150  # seconds — max time other workers wait
 
 
 def create_app() -> FastAPI:
-    if APP_SETTINGS.DEBUG:
+    if APP_SETTINGS.APP_DEBUG:
         _app = FastAPI(
             title=APP_SETTINGS.APP_TITLE, description=APP_SETTINGS.APP_DESCRIPTION, version=APP_SETTINGS.VERSION, openapi_url="/openapi.json", middleware=make_middlewares(), lifespan=lifespan
         )

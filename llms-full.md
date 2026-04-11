@@ -384,7 +384,7 @@ class CRUDBase(Generic[ModelType]):
 ```python
 # .env
 SECRET_KEY=your-secret-key
-DEBUG=true
+APP_DEBUG=true
 CORS_ORIGINS=["http://localhost:9527"]
 REDIS_URL=redis://localhost:6379/0
 DB_PATH=app_system.sqlite3

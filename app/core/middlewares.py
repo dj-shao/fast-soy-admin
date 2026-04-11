@@ -137,7 +137,7 @@ class PrettyErrorsMiddleware(BaseHTTPMiddleware):
             sys.stderr.flush()
 
             # Return plain-text output in debug mode (strip ANSI escape codes)
-            if APP_SETTINGS.DEBUG:
+            if APP_SETTINGS.APP_DEBUG:
                 ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
                 details: str | None = ansi_escape.sub("", f"{msg}\n{output}")
             else:

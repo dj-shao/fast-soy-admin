@@ -241,7 +241,7 @@ pnpm typecheck                # vue-tsc type check
 
 ## Configuration
 
-- `.env` — SECRET_KEY, DEBUG, CORS, Redis URL, DB path
+- `.env` — SECRET_KEY, APP_DEBUG, CORS, Redis URL, DB path
 - `ruff.toml` — Line length 200, rules E/F/I, double quotes
 - Pyright strict mode on `app/` directory
 
