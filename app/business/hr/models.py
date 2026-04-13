@@ -13,7 +13,7 @@ from app.utils import AuditMixin, BaseModel, StatusType
 class Department(BaseModel, AuditMixin):
     """部门"""
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100, unique=True, description="部门名称")
     code = fields.CharField(max_length=50, unique=True, description="部门编码")
     description = fields.CharField(max_length=500, null=True, blank=True, description="部门描述")
@@ -29,7 +29,7 @@ class Department(BaseModel, AuditMixin):
 class Skill(BaseModel, AuditMixin):
     """标签"""
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100, unique=True, description="标签名称")
     category = fields.CharField(max_length=50, description="标签分类")
     description = fields.CharField(max_length=500, null=True, blank=True, description="标签描述")
@@ -41,7 +41,7 @@ class Skill(BaseModel, AuditMixin):
 class Employee(BaseModel, AuditMixin):
     """员工"""
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=50, description="员工姓名")
     employee_no = fields.CharField(max_length=20, unique=True, description="工号")
     email = fields.CharField(max_length=100, null=True, blank=True, description="邮箱")

@@ -26,7 +26,8 @@ class Logger:
         for sub in ("info", "error", "uncaught"):
             (APP_SETTINGS.LOGS_ROOT / sub).mkdir(parents=True, exist_ok=True)
 
-        self.logger.add(sys.stdout)
+        if APP_SETTINGS.APP_DEBUG:
+            self.logger.add(sys.stdout)
 
         # 普通日志（DEBUG/INFO/WARNING/SUCCESS）→ logs/info/，定期删除
         self.logger.add(
@@ -64,7 +65,6 @@ class Logger:
         for logger_name in LOGGER_NAMES:
             logging_logger = logging.getLogger(logger_name)
             logging_logger.handlers = [InterceptHandler()]
-
 
     def get_logger(self):
         return self.logger

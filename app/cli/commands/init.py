@@ -1,0 +1,116 @@
+"""init 命令 — 创建业务模块目录骨架，生成初始 models.py 并输出引导提示。"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import click
+
+BUSINESS_DIR = Path(__file__).resolve().parents[2] / "business"
+
+MODELS_TEMPLATE = '''\
+# pyright: reportIncompatibleVariableOverride=false
+"""
+{cn_name} — 业务模型定义。
+
+在此文件中定义 Tortoise ORM 模型，完成后运行:
+
+    python -m app.cli gen {module_name}
+
+即可自动生成 schemas / controllers / api 等文件。
+"""
+
+from tortoise import fields
+
+from app.utils import AuditMixin, BaseModel, StatusType
+
+
+# ---- 在下方定义你的模型 ----
+#
+# class Example(BaseModel, AuditMixin):
+#     """示例"""
+#
+#     id = fields.IntField(primary_key=True)
+#     name = fields.CharField(max_length=100, description="名称")
+#     status = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
+#
+#     class Meta:
+#         table = "biz_{module_name}_example"
+#         table_description = "示例"
+'''
+
+GUIDE_TEXT = """\
+
+\033[1;32m✅ 模块 {module_name} 创建成功！\033[0m
+
+  📂 {module_path}/
+     ├── __init__.py
+     └── models.py          ← 请在这里定义你的模型
+
+\033[1;33m📋 下一步：\033[0m
+
+  \033[1m1.\033[0m 用编辑器打开 \033[36m{models_path}\033[0m
+     参照注释中的示例，定义你的 Tortoise ORM 模型。
+
+     几个要点：
+     • 继承 \033[36mBaseModel, AuditMixin\033[0m
+     • 每个字段加上 \033[36mdescription="..."\033[0m（用于生成 schema 注释）
+     • 类的 docstring 写中文名（如 \033[36m\"\"\"仓库\"\"\"\033[0m），将作为 API summary 前缀
+     • Meta.table 建议用 \033[36mbiz_{module_name}_xxx\033[0m 前缀
+
+  \033[1m2.\033[0m 模型写好后，运行代码生成：
+
+     \033[36mpython -m app.cli gen {module_name}\033[0m
+
+     将自动生成 schemas.py / controllers.py / services.py / api/ 等文件。
+
+  \033[1m3.\033[0m 生成后执行数据库迁移：
+
+     \033[36mtortoise makemigrations && tortoise migrate\033[0m
+
+  \033[1m4.\033[0m 启动服务验证：
+
+     \033[36mpython run.py\033[0m
+"""
+
+
+def _validate_module_name(_ctx: click.Context, _param: click.Parameter, value: str) -> str:
+    if not re.match(r"^[a-z][a-z0-9_]*$", value):
+        raise click.BadParameter("模块名只能包含小写字母、数字和下划线，且以字母开头")
+    if value.startswith("_"):
+        raise click.BadParameter("以 _ 开头的目录会被 autodiscover 跳过")
+    return value
+
+
+@click.command()
+@click.argument("module_name", callback=_validate_module_name)
+@click.option("--cn-name", prompt="模块中文名", help="模块中文名（如：库存管理）")
+def init(module_name: str, cn_name: str):
+    """创建业务模块目录骨架。
+
+    MODULE_NAME: 模块名（snake_case），将创建到 app/business/<MODULE_NAME>/
+    """
+    module_dir = BUSINESS_DIR / module_name
+
+    if module_dir.exists():
+        raise click.ClickException(f"模块目录已存在: {module_dir.relative_to(BUSINESS_DIR.parent.parent)}")
+
+    # 创建目录
+    module_dir.mkdir(parents=True)
+
+    # __init__.py
+    (module_dir / "__init__.py").write_text("", encoding="utf-8")
+
+    # models.py
+    models_content = MODELS_TEMPLATE.format(module_name=module_name, cn_name=cn_name)
+    (module_dir / "models.py").write_text(models_content, encoding="utf-8")
+
+    # 输出引导
+    click.echo(
+        GUIDE_TEXT.format(
+            module_name=module_name,
+            module_path=module_dir.relative_to(BUSINESS_DIR.parent.parent),
+            models_path=(module_dir / "models.py").relative_to(BUSINESS_DIR.parent.parent),
+        )
+    )
