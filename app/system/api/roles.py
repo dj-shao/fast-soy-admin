@@ -33,7 +33,7 @@ router = crud.router
 @crud.override("create")
 async def _create_role(role_in: RoleCreate, request: Request):
     if await role_controller.exists(role_code=role_in.role_code):
-        return Fail(code=Code.DUPLICATE_RESOURCE, msg="该角色编码已存在")
+        return Fail(code=Code.DUPLICATE_ROLE_CODE, msg="该角色编码已存在")
 
     new_role = await role_controller.create(obj_in=role_in)
     await load_role_permissions(request.app.state.redis, role_code=new_role.role_code)

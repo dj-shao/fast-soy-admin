@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
@@ -63,7 +65,7 @@ class TestUserCRUD:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.DUPLICATE_USER_EMAIL
 
     async def test_create_user_no_email(self, auth_client: AsyncClient):
         resp = await auth_client.post(
@@ -76,7 +78,7 @@ class TestUserCRUD:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.USER_EMAIL_REQUIRED
 
     async def test_create_user_no_role(self, auth_client: AsyncClient):
         resp = await auth_client.post(
@@ -89,7 +91,7 @@ class TestUserCRUD:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.USER_ROLE_REQUIRED
 
     async def test_get_user(self, auth_client: AsyncClient, seed_data):
         user = seed_data

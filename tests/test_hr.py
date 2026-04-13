@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 PREFIX = "/api/v1/business/hr"
@@ -189,7 +191,7 @@ class TestEmployeeCRUD:
             },
         )
         assert resp.status_code == 200
-        assert resp.json()["code"] != "0000"
+        assert resp.json()["code"] == Code.HR_DEPARTMENT_REQUIRED
 
     async def test_get_employee(self, auth_client: AsyncClient, hr_data):
         emp_id = hr_data["employee"].id
@@ -215,7 +217,7 @@ class TestEmployeeCRUD:
             json={"skillIds": list(range(1, 12))},
         )
         assert resp.status_code == 200
-        assert resp.json()["code"] != "0000"
+        assert resp.json()["code"] == Code.HR_SKILLS_EXCEED_LIMIT
 
 
 # ===================== Manager Operations =====================
@@ -250,7 +252,7 @@ class TestManagerOperations:
             json={"skillIds": [hr_data["skills"][0].id]},
         )
         assert resp.status_code == 200
-        assert resp.json()["code"] != "0000"
+        assert resp.json()["code"] == Code.HR_EMPLOYEE_NOT_IN_DEPT
 
 
 # ===================== Personal Operations =====================
@@ -290,4 +292,4 @@ class TestPersonalOperations:
     async def test_my_profile_no_auth(self, client: AsyncClient):
         resp = await client.get(f"{PREFIX}/my/profile")
         assert resp.status_code == 200
-        assert resp.json()["code"] != "0000"
+        assert resp.json()["code"] == Code.INVALID_TOKEN

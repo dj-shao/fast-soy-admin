@@ -32,9 +32,9 @@ class RoleCreate(RoleBase):
     @model_validator(mode="after")
     def validate_create(self):
         if not self.role_name.strip():
-            raise SchemaValidationError(code=Code.FAIL, msg="角色名称不能为空")
+            raise SchemaValidationError(code=Code.ROLE_NAME_REQUIRED, msg="角色名称不能为空")
         if not self.role_code.strip():
-            raise SchemaValidationError(code=Code.FAIL, msg="角色编码不能为空")
+            raise SchemaValidationError(code=Code.ROLE_CODE_REQUIRED, msg="角色编码不能为空")
         return self
 
 
@@ -129,9 +129,9 @@ class MenuCreate(MenuBase):
     @model_validator(mode="after")
     def validate_create(self):
         if not self.route_name.strip():
-            raise SchemaValidationError(code=Code.FAIL, msg="路由名称不能为空")
+            raise SchemaValidationError(code=Code.ROUTE_NAME_REQUIRED, msg="路由名称不能为空")
         if not self.route_path.strip():
-            raise SchemaValidationError(code=Code.FAIL, msg="路由路径不能为空")
+            raise SchemaValidationError(code=Code.ROUTE_PATH_REQUIRED, msg="路由路径不能为空")
         return self
 
 

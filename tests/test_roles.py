@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
 from app.system.models import Menu
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -73,7 +74,7 @@ class TestRoleCRUD:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.DUPLICATE_ROLE_CODE
 
     async def test_get_role(self, auth_client: AsyncClient, seed_data):
         from app.system.controllers import role_controller
@@ -131,4 +132,4 @@ class TestRoleCRUD:
         resp = await client.post("/api/v1/system-manage/roles/search", json={"current": 1, "size": 10})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.INVALID_TOKEN

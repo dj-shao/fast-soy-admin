@@ -56,7 +56,7 @@ class AuthControl:
             token_version_in_jwt = decode_data["data"].get("tokenVersion", 0)
             current_version = int(await redis.get(f"token_version:{user_id}") or 0)
             if token_version_in_jwt < current_version:
-                raise BizError(code=Code.INVALID_TOKEN, msg="Token已失效，请重新登录")
+                raise BizError(code=Code.SESSION_INVALIDATED, msg="Token已失效，请重新登录")
 
         user = await User.filter(id=user_id).first()
         if not user:
@@ -89,7 +89,7 @@ class PermissionControl:
             return
 
         if not role_codes:
-            raise BizError(code=Code.PERMISSION_DENIED, msg="该用户未绑定角色")
+            raise BizError(code=Code.USER_NO_ROLE, msg="该用户未绑定角色")
 
         method = request.method.lower()
         path = request.url.path
@@ -142,10 +142,10 @@ def require_buttons(*button_codes: str, require_all: bool = False):
         if require_all:
             missing = [c for c in button_codes if c not in owned]
             if missing:
-                raise BizError(code=Code.PERMISSION_DENIED, msg=f"缺少按钮权限: {', '.join(missing)}")
+                raise BizError(code=Code.MISSING_BUTTON_PERMISSION, msg=f"缺少按钮权限: {', '.join(missing)}")
         else:
             if not any(c in owned for c in button_codes):
-                raise BizError(code=Code.PERMISSION_DENIED, msg=f"需要任一按钮权限: {', '.join(button_codes)}")
+                raise BizError(code=Code.NEED_ANY_BUTTON_PERMISSION, msg=f"需要任一按钮权限: {', '.join(button_codes)}")
 
     return Depends(_checker)
 
@@ -163,9 +163,9 @@ def require_roles(*role_codes_required: str, require_all: bool = False):
         if require_all:
             missing = [c for c in role_codes_required if c not in owned]
             if missing:
-                raise BizError(code=Code.PERMISSION_DENIED, msg=f"缺少角色: {', '.join(missing)}")
+                raise BizError(code=Code.MISSING_ROLE, msg=f"缺少角色: {', '.join(missing)}")
         else:
             if not any(c in owned for c in role_codes_required):
-                raise BizError(code=Code.PERMISSION_DENIED, msg=f"需要任一角色: {', '.join(role_codes_required)}")
+                raise BizError(code=Code.NEED_ANY_ROLE, msg=f"需要任一角色: {', '.join(role_codes_required)}")
 
     return Depends(_checker)

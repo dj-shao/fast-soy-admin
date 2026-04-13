@@ -25,11 +25,13 @@ class UserCreate(UserBase):
     @model_validator(mode="after")
     def validate_create(self):
         if not self.user_name:
-            raise SchemaValidationError(code=Code.FAIL, msg="用户名不能为空")
+            raise SchemaValidationError(code=Code.USERNAME_REQUIRED, msg="用户名不能为空")
         if not self.password:
-            raise SchemaValidationError(code=Code.FAIL, msg="密码不能为空")
+            raise SchemaValidationError(code=Code.PASSWORD_REQUIRED, msg="密码不能为空")
+        if not self.user_email:
+            raise SchemaValidationError(code=Code.USER_EMAIL_REQUIRED, msg="用户邮箱不能为空")
         if not self.by_user_role_code_list:
-            raise SchemaValidationError(code=Code.FAIL, msg="用户至少需要一个角色")
+            raise SchemaValidationError(code=Code.USER_ROLE_REQUIRED, msg="用户至少需要一个角色")
         if not self.nick_name:
             self.nick_name = self.user_name
         return self
@@ -39,7 +41,7 @@ class UserUpdate(UserBase):
     @model_validator(mode="after")
     def validate_update(self):
         if not self.by_user_role_code_list:
-            raise SchemaValidationError(code=Code.FAIL, msg="用户至少需要一个角色")
+            raise SchemaValidationError(code=Code.USER_ROLE_REQUIRED, msg="用户至少需要一个角色")
         return self
 
 

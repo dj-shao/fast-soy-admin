@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
@@ -73,7 +75,7 @@ class TestMenuCRUD:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.DUPLICATE_MENU_ROUTE
 
     async def test_get_menu(self, auth_client: AsyncClient):
         # Create a menu to fetch
@@ -140,4 +142,4 @@ class TestMenuCRUD:
         resp = await client.post("/api/v1/system-manage/menus/search", json={"current": 1, "size": 10})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.INVALID_TOKEN

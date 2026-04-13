@@ -3,6 +3,7 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
 from app.system.radar.models import RadarQuery, RadarRequest, RadarUserLog
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -91,9 +92,9 @@ class TestListRequests:
     async def test_page_size_validation(self, client: AsyncClient, seed_radar_api_data):
         resp = await client.get("/__radar/api/requests", params={"page_size": 200})
         data = resp.json()
-        # Exceeds le=100 validation — app returns error code instead of HTTP 422
+        # Exceeds le=100 validation — FastAPI RequestValidationError wraps into 1200
         assert resp.status_code == 200
-        assert data["code"] != "0000" or len(data["data"]["records"]) <= 100
+        assert data["code"] == Code.REQUEST_VALIDATION
 
 
 class TestRequestDetail:
@@ -220,7 +221,7 @@ class TestResolveException:
         # Missing body — app exception handler wraps validation error
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.REQUEST_VALIDATION
 
 
 class TestUserLogs:

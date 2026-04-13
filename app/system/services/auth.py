@@ -100,7 +100,7 @@ async def impersonate_user(redis: Redis, *, target_user_id: int, impersonator_id
     """
     target = await User.filter(id=target_user_id).first()
     if not target:
-        raise BizError(code=Code.FAIL, msg="目标用户不存在")
+        raise BizError(code=Code.TARGET_USER_NOT_FOUND, msg="目标用户不存在")
     if target.status_type == StatusType.disable:
         raise BizError(code=Code.ACCOUNT_DISABLED, msg="目标用户已被禁用")
 

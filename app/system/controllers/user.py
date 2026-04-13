@@ -49,13 +49,13 @@ class UserController(CRUDBase[User, UserCreate, UserUpdate]):
 
         if not user:
             radar_log("用户登录失败: 用户名不存在", level="WARNING", data={"userName": credentials.user_name})
-            raise BizError(code=Code.FAIL, msg="用户名或密码错误")
+            raise BizError(code=Code.WRONG_CREDENTIALS, msg="用户名或密码错误")
 
         verified = verify_password(credentials.password or "", user.password or "")
 
         if not verified:
             radar_log("用户登录失败: 密码错误", level="WARNING", data={"userName": user.user_name, "userId": user.id})
-            raise BizError(code=Code.FAIL, msg="用户名或密码错误")
+            raise BizError(code=Code.WRONG_CREDENTIALS, msg="用户名或密码错误")
 
         if user.status_type == StatusType.disable:
             radar_log("用户登录失败: 账号已禁用", level="ERROR", data={"userName": user.user_name, "userId": user.id})

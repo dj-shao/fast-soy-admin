@@ -65,7 +65,7 @@ async def _create_user(user_in: UserCreate):
     assert user_in.by_user_role_code_list is not None
 
     if await user_controller.get_by_email(user_in.user_email):
-        return Fail(code=Code.DUPLICATE_RESOURCE, msg="该邮箱已被注册")
+        return Fail(code=Code.DUPLICATE_USER_EMAIL, msg="该邮箱已被注册")
 
     async with in_transaction(get_db_conn(User)):
         new_user = await user_controller.create(obj_in=user_in)

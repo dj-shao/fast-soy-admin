@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.code import Code
+
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
@@ -29,7 +31,7 @@ class TestLogin:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.WRONG_CREDENTIALS
 
     async def test_login_nonexistent_user(self, client: AsyncClient, seed_data):
         resp = await client.post(
@@ -41,7 +43,7 @@ class TestLogin:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.WRONG_CREDENTIALS
 
 
 class TestRefreshToken:
@@ -78,7 +80,7 @@ class TestRefreshToken:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.INVALID_TOKEN
 
 
 class TestUserInfo:
@@ -94,4 +96,4 @@ class TestUserInfo:
         resp = await client.get("/api/v1/auth/user-info")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["code"] != "0000"
+        assert data["code"] == Code.INVALID_TOKEN

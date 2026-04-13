@@ -141,6 +141,115 @@ cd web && pnpm dev
 cd web && pnpm build
 ```
 
+## 手动同步前端代码
+
+`web/` 目录的源码由独立仓库 [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend) 维护。因该仓库与本仓库**没有共同祖先**（`git merge-base` 为空），无法直接使用 `git merge` / `git cherry-pick`。需要按以下流程手动同步。
+
+### 1. 配置上游远程（只需一次）
+
+```bash
+git remote add frontend https://github.com/sleep1223/fast-soy-admin-frontend.git
+git fetch frontend
+```
+
+### 2. 检查上游是否有新提交
+
+```bash
+git fetch frontend
+
+# 查看上游最新提交
+git log frontend/example --oneline -20
+
+# 查看本仓库最近一次同步提交的时间
+git log --grep="upgrade frontend\|sync.*frontend" --format="%h %ci %s" | head -5
+```
+
+如果 `frontend/example` 的最新提交时间早于或等于本仓库最后一次同步时间，则无需同步。
+
+### 3. 在隔离分支上执行同步
+
+推荐在独立分支上进行，便于对比与回滚：
+
+```bash
+git switch -c chore/sync-frontend
+```
+
+### 4. 覆盖 `web/` 并保留后端适配文件
+
+由于本仓库 `web/` 已经包含了**仅服务于后端的定制代码**（HR / Radar / business 模块、tests 等），直接整目录替换会丢失这些代码。推荐使用"先覆盖，再从 `HEAD` 还原后端新增文件"的工作流：
+
+```bash
+# 4.1 记录当前 HEAD，用于后面恢复后端新增文件
+PREV=$(git rev-parse HEAD)
+
+# 4.2 清空 web/ 并从上游导入
+git rm -rf web
+git read-tree --prefix=web/ -u frontend/example
+
+# 4.3 还原后端适配文件（这些是仅存在于本仓库、上游没有的路径）
+git restore --source=$PREV --staged --worktree -- \
+    web/vitest.config.ts \
+    web/src/components/common/ansi-traceback.vue \
+    web/src/hooks/common/polling.ts \
+    web/src/service/api/__tests__ \
+    web/src/service/api/business \
+    web/src/service/api/hr-manage.ts \
+    web/src/service/api/monitor.ts \
+    web/src/service/api/radar.ts \
+    web/src/store/modules/business \
+    web/src/typings/api/hr-manage.d.ts \
+    web/src/typings/api/radar.d.ts \
+    web/src/views/business \
+    web/src/views/hr \
+    web/src/views/manage/radar
+```
+
+可以用下面这条命令列出"只存在于 `HEAD` 而不在上游"的文件，辅助补全还原清单（注意 `frontend/example` 不带 `web/` 前缀）：
+
+```bash
+diff <(git ls-tree -r --name-only HEAD web/ | sed 's|^web/||' | sort) \
+     <(git ls-tree -r --name-only frontend/example | sort) \
+     | grep '^<' | sed 's|^< |web/|'
+```
+
+### 5. 手动合并被双方修改的文件
+
+有些上游文件在本仓库也做过改动（例如 `web/src/service/api/auth.ts`、`web/src/views/manage/role/**`、`web/src/typings/api/*.d.ts` 等），第 4 步会被上游版本覆盖。需要逐个对比 `PREV` 与当前版本，手动把后端适配逻辑合并回来：
+
+```bash
+# 列出需要手工合并的文件
+git diff --name-only $PREV -- web/
+
+# 对单个文件查看本仓库之前的改动，作为合并参考
+git show $PREV:web/src/service/api/auth.ts
+```
+
+建议结合 IDE 的对比视图（或 `git difftool $PREV -- web/<path>`）逐一处理。
+
+### 6. 本地验证
+
+```bash
+cd web
+pnpm install         # lockfile 可能有更新
+pnpm typecheck
+pnpm lint
+pnpm build           # 生产构建冒烟测试
+pnpm dev             # 打开浏览器手工点一遍关键页面
+```
+
+同时确认后端联调正常：`python run.py` 起服务，登录、RBAC、HR、Radar 等页面都不报错。
+
+### 7. 提交
+
+提交信息请显式标注本次同步对应的上游 commit，便于下次同步时定位起点：
+
+```bash
+git add web
+git commit -m "chore(web): sync with fast-soy-admin-frontend@<上游commit短hash>"
+```
+
+然后合回 `dev` 分支即可。
+
 ## 业务响应码
 
 所有接口统一返回格式 `{"code": "xxxx", "msg": "...", "data": ...}`，业务码按分段设计（源码位于 `app/core/code.py`）：

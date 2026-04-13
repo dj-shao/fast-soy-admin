@@ -141,6 +141,113 @@ cd web && pnpm dev
 cd web && pnpm build
 ```
 
+## Manually syncing frontend code
+
+The `web/` directory is maintained in a separate repository: [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend). The two repos share **no common ancestor** (`git merge-base` is empty), so `git merge` / `git cherry-pick` will not work. Use the workflow below instead.
+
+### 1. Configure the upstream remote (one-time)
+
+```bash
+git remote add frontend https://github.com/sleep1223/fast-soy-admin-frontend.git
+git fetch frontend
+```
+
+### 2. Check whether upstream has new commits
+
+```bash
+git fetch frontend
+
+# Latest upstream commits
+git log frontend/example --oneline -20
+
+# Latest sync commit on this repo
+git log --grep="upgrade frontend\|sync.*frontend" --format="%h %ci %s" | head -5
+```
+
+If the newest `frontend/example` commit is older than (or the same as) the last sync commit here, there is nothing to pull.
+
+### 3. Work on an isolated branch
+
+```bash
+git switch -c chore/sync-frontend
+```
+
+### 4. Replace `web/` while preserving backend-specific files
+
+`web/` in this repo already contains backend-specific additions (HR / Radar / business modules, tests, etc.) that do not exist upstream. Wholesale replacement would drop them. The recommended flow is "overwrite, then restore the backend-only files from `HEAD`":
+
+```bash
+# 4.1 Record current HEAD so we can restore files from it later
+PREV=$(git rev-parse HEAD)
+
+# 4.2 Clear web/ and import from upstream
+git rm -rf web
+git read-tree --prefix=web/ -u frontend/example
+
+# 4.3 Restore backend-only files (paths that exist here but not upstream)
+git restore --source=$PREV --staged --worktree -- \
+    web/vitest.config.ts \
+    web/src/components/common/ansi-traceback.vue \
+    web/src/hooks/common/polling.ts \
+    web/src/service/api/__tests__ \
+    web/src/service/api/business \
+    web/src/service/api/hr-manage.ts \
+    web/src/service/api/monitor.ts \
+    web/src/service/api/radar.ts \
+    web/src/store/modules/business \
+    web/src/typings/api/hr-manage.d.ts \
+    web/src/typings/api/radar.d.ts \
+    web/src/views/business \
+    web/src/views/hr \
+    web/src/views/manage/radar
+```
+
+You can regenerate the "local-only" file list with the following command (note that `frontend/example` has no `web/` prefix):
+
+```bash
+diff <(git ls-tree -r --name-only HEAD web/ | sed 's|^web/||' | sort) \
+     <(git ls-tree -r --name-only frontend/example | sort) \
+     | grep '^<' | sed 's|^< |web/|'
+```
+
+### 5. Merge files edited on both sides by hand
+
+Some upstream files are also modified locally (e.g. `web/src/service/api/auth.ts`, `web/src/views/manage/role/**`, `web/src/typings/api/*.d.ts`). Step 4 will clobber them with the upstream version. Go through each one and re-apply the backend-facing changes:
+
+```bash
+# List files whose local version diverged from upstream
+git diff --name-only $PREV -- web/
+
+# Inspect the previous local version of a specific file as merge reference
+git show $PREV:web/src/service/api/auth.ts
+```
+
+A side-by-side diff tool (or `git difftool $PREV -- web/<path>`) helps a lot here.
+
+### 6. Validate locally
+
+```bash
+cd web
+pnpm install         # lockfile may have changed
+pnpm typecheck
+pnpm lint
+pnpm build           # smoke-test the production build
+pnpm dev             # click through the key pages in a browser
+```
+
+Also run the backend (`python run.py`) and verify login, RBAC, HR, Radar etc. still work end-to-end.
+
+### 7. Commit
+
+Record the upstream commit you synced against — that becomes the starting point for the next sync:
+
+```bash
+git add web
+git commit -m "chore(web): sync with fast-soy-admin-frontend@<upstream-short-sha>"
+```
+
+Then merge the branch back into `dev`.
+
 ## TODO
 
 - [x] Optimize response speed using Redis

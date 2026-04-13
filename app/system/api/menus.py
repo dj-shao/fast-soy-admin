@@ -69,7 +69,7 @@ async def _list_menus(obj_in: MenuSearch):
 @crud.override("create")
 async def _create_menu(menu_in: MenuCreate):
     if await menu_controller.exists(route_path=menu_in.route_path):
-        return Fail(code=Code.DUPLICATE_RESOURCE, msg=f"路由路径 {menu_in.route_path} 已存在")
+        return Fail(code=Code.DUPLICATE_MENU_ROUTE, msg=f"路由路径 {menu_in.route_path} 已存在")
 
     if menu_in.active_menu:
         menu_in.active_menu = await menu_controller.get(menu_name=menu_in.active_menu)  # pyright: ignore[reportAttributeAccessIssue]

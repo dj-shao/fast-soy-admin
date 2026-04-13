@@ -45,7 +45,7 @@ async def _(captcha_in: CaptchaRequest, request: Request):
     redis = request.app.state.redis
     success = await send_captcha(redis, captcha_in.phone)
     if not success:
-        return Fail(msg="验证码发送失败，请稍后重试")
+        return Fail(code=Code.CAPTCHA_SEND_FAILED, msg="验证码发送失败，请稍后重试")
     return Success(msg="验证码已发送")
 
 
@@ -54,11 +54,11 @@ async def _(login_in: CodeLoginSchema, request: Request):
     redis = request.app.state.redis
 
     if not await verify_captcha(redis, login_in.phone, login_in.code):
-        return Fail(code=Code.FAIL, msg="验证码错误或已过期")
+        return Fail(code=Code.CAPTCHA_INVALID, msg="验证码错误或已过期")
 
     user_obj = await User.filter(user_phone=login_in.phone).first()
     if not user_obj:
-        return Fail(code=Code.FAIL, msg="该手机号未注册")
+        return Fail(code=Code.PHONE_NOT_REGISTERED, msg="该手机号未注册")
 
     if user_obj.status_type == StatusType.disable:
         return Fail(code=Code.ACCOUNT_DISABLED, msg="该账号已被禁用")
@@ -78,14 +78,14 @@ async def _(register_in: RegisterSchema, request: Request):
     redis = request.app.state.redis
 
     if not await verify_captcha(redis, register_in.phone, register_in.code):
-        return Fail(code=Code.FAIL, msg="验证码错误或已过期")
+        return Fail(code=Code.CAPTCHA_INVALID, msg="验证码错误或已过期")
 
     if await User.filter(user_phone=register_in.phone).exists():
-        return Fail(code=Code.DUPLICATE_RESOURCE, msg="该手机号已注册")
+        return Fail(code=Code.DUPLICATE_USER_PHONE, msg="该手机号已注册")
 
     user_name = register_in.user_name or register_in.phone
     if await User.filter(user_name=user_name).exists():
-        return Fail(code=Code.DUPLICATE_RESOURCE, msg="该用户名已存在")
+        return Fail(code=Code.DUPLICATE_USER_NAME, msg="该用户名已存在")
 
     default_role = await Role.filter(role_code="R_USER").first()
     user_obj = await User.create(
@@ -106,7 +106,7 @@ async def _(register_in: RegisterSchema, request: Request):
 @router.post("/refresh-token", summary="刷新认证")
 async def _(jwt_token: JWTOut, request: Request):
     if not jwt_token.refresh_token:
-        return Fail(code=Code.INVALID_TOKEN, msg="刷新令牌无效")
+        return Fail(code=Code.REFRESH_TOKEN_MISSING, msg="刷新令牌无效")
     status, code, data = check_token(jwt_token.refresh_token)
     if not status:
         return Fail(code=code, msg=data)
@@ -115,7 +115,7 @@ async def _(jwt_token: JWTOut, request: Request):
     user_obj = await user_controller.get(id=user_id)
 
     if data["data"]["tokenType"] != "refreshToken":
-        return Fail(code=Code.INVALID_SESSION, msg="该令牌不是刷新令牌")
+        return Fail(code=Code.NOT_REFRESH_TOKEN, msg="该令牌不是刷新令牌")
 
     if user_obj.status_type == StatusType.disable:
         radar_log("刷新令牌失败: 账号已禁用", level="WARNING", data={"userId": user_id})
@@ -125,7 +125,7 @@ async def _(jwt_token: JWTOut, request: Request):
     token_version_in_jwt = data["data"].get("tokenVersion", 0)
     current_version = await get_token_version(redis, user_id)
     if token_version_in_jwt < current_version:
-        return Fail(code=Code.INVALID_TOKEN, msg="Token已失效，请重新登录")
+        return Fail(code=Code.SESSION_INVALIDATED, msg="Token已失效，请重新登录")
 
     await user_controller.update_last_login(user_id)
     impersonator_id = data["data"].get("impersonatorId") or None
@@ -161,7 +161,7 @@ async def _(body: UpdatePassword, request: Request):
     user_obj = await user_controller.get(id=user_id)
 
     if not verify_password(body.old_password, user_obj.password):
-        return Fail(code=Code.FAIL, msg="原密码错误")
+        return Fail(code=Code.OLD_PASSWORD_WRONG, msg="原密码错误")
 
     await User.filter(id=user_id).update(
         password=get_password_hash(body.new_password),
@@ -180,7 +180,7 @@ async def _(user_id: int, request: Request):
     """超级管理员模拟登录为指定用户，无需密码"""
     role_codes = CTX_ROLE_CODES.get()
     if "R_SUPER" not in role_codes:
-        return Fail(code=Code.PERMISSION_DENIED, msg="仅超级管理员可以模拟登录")
+        return Fail(code=Code.SUPER_ADMIN_ONLY, msg="仅超级管理员可以模拟登录")
 
     impersonator_id = CTX_USER_ID.get()
     try:

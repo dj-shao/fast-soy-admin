@@ -9,6 +9,7 @@ from app.business.hr.config import BIZ_SETTINGS
 from app.business.hr.controllers import employee_controller, skill_controller
 from app.business.hr.models import Department, Employee
 from app.business.hr.schemas import EmployeeCreate, EmployeeSearch, EmployeeUpdate
+from app.core.code import Code
 from app.system.services import create_system_user
 from app.utils import Fail, Success, get_db_conn, has_button_code, is_super_admin, radar_log
 
@@ -29,18 +30,18 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
     # 1. 权限 & 部门
     if is_super_admin():
         if not emp_in.department_id:
-            return Fail(msg="超级管理员创建员工需要指定部门")
+            return Fail(code=Code.HR_DEPARTMENT_REQUIRED, msg="超级管理员创建员工需要指定部门")
     elif has_button_code("B_HR_CREATE") and current_emp:
         dept = await Department.filter(manager_id=current_emp.id).first()
         if not dept:
-            return Fail(msg="仅部门主管可创建员工")
+            return Fail(code=Code.HR_MANAGER_REQUIRED, msg="仅部门主管可创建员工")
         emp_in.department_id = dept.id
     else:
-        return Fail(msg="无权限创建员工")
+        return Fail(code=Code.HR_CREATE_FORBIDDEN, msg="无权限创建员工")
 
     # 2. 校验标签上限
     if emp_in.skill_ids and len(emp_in.skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
+        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
 
     employee_no = await generate_employee_no()
 
@@ -108,7 +109,7 @@ async def list_employees_with_relations(search_in: EmployeeSearch):
 async def update_employee(emp_id: int, emp_in: EmployeeUpdate):
     """更新员工信息 — 含标签关联更新"""
     if emp_in.skill_ids and len(emp_in.skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
+        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
     async with in_transaction(get_db_conn(Employee)):
         emp = await employee_controller.update(id=emp_id, obj_in=emp_in, exclude={"skill_ids"})
         if emp_in.skill_ids is not None:
@@ -122,7 +123,7 @@ async def update_employee(emp_id: int, emp_in: EmployeeUpdate):
 async def update_employee_skills(emp: Employee, skill_ids: list[int], *, log_label: str = "编辑标签", extra_log: dict[str, object] | None = None):
     """通用标签更新 — 校验上限 + 清除重建 + 日志"""
     if len(skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
+        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
     await emp.skills.clear()
     for sid in skill_ids:
         await emp.skills.add(await skill_controller.get(id=sid))
@@ -157,7 +158,7 @@ async def edit_subordinate_skills(mgr: Employee, emp_id: int, skill_ids: list[in
     """主管编辑下属标签"""
     target = await employee_controller.get_or_none(id=emp_id, department_id=mgr.department_id)  # type: ignore[attr-defined]
     if not target:
-        return Fail(msg="该员工不在您的部门中")
+        return Fail(code=Code.HR_EMPLOYEE_NOT_IN_DEPT, msg="该员工不在您的部门中")
     return await update_employee_skills(target, skill_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
 
 
