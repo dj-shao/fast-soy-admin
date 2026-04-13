@@ -1,3 +1,4 @@
+from app.core.constants import SUPER_ADMIN_ROLE
 from app.system.models import Button, Menu, Role
 from app.system.services import ensure_menu, ensure_role, ensure_user
 from app.system.services.init_helper import _safe_update_or_create
@@ -25,8 +26,8 @@ SYSTEM_ROLE_SEEDS = [
 ]
 
 SYSTEM_USER_SEEDS = [
-    {"user_name": "Soybean", "user_email": "admin@admin.com", "password": "123456", "role_codes": ["R_SUPER"]},
-    {"user_name": "Super", "user_email": "admin1@admin.com", "password": "123456", "role_codes": ["R_SUPER"]},
+    {"user_name": "Soybean", "user_email": "admin@admin.com", "password": "123456", "role_codes": [SUPER_ADMIN_ROLE]},
+    {"user_name": "Super", "user_email": "admin1@admin.com", "password": "123456", "role_codes": [SUPER_ADMIN_ROLE]},
     {"user_name": "Admin", "user_email": "admin2@admin.com", "password": "123456", "role_codes": ["R_ADMIN"]},
     {"user_name": "User", "user_email": "user@user.com", "password": "123456", "role_codes": ["R_USER"]},
 ]
@@ -393,7 +394,7 @@ async def _ensure_super_role() -> None:
     role_home_menu = await Menu.get(route_name="home")
     super_role, _ = await _safe_update_or_create(
         Role,
-        {"role_code": "R_SUPER"},
+        {"role_code": SUPER_ADMIN_ROLE},
         {
             "role_name": "超级管理员",
             "role_desc": "超级管理员",

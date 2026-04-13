@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
-from app.core.autodiscover import discover_business_models
+from app.core.autodiscover import discover_business_db_configs, discover_business_models
 
 
 class Settings(BaseSettings):
@@ -79,10 +79,37 @@ class Settings(BaseSettings):
         if self.TORTOISE_ORM:
             return self
 
-        models = ["app.system.models", "app.system.radar.models"] + discover_business_models()
+        # 业务模块可在 config.py 中声明独立 DB_URL，自动注册为独立连接
+        biz_db_configs = discover_business_db_configs()
+        # 使用默认连接的模型列表（排除已声明独立连接的模块）
+        default_models = ["app.system.models", "app.system.radar.models"]
+        for m in discover_business_models():
+            module_name = m.split(".")[-2]  # e.g. "app.business.hr.models" -> "hr"
+            if module_name not in biz_db_configs:
+                default_models.append(m)
+
+        connections: dict[str, str] = {"conn_system": self.DB_URL}
+        apps: dict[str, dict] = {
+            "app_system": {"models": default_models, "default_connection": "conn_system", "migrations": "migrations.app_system"},
+        }
+
+        # 为每个声明了独立 DB_URL 的业务模块注册独立连接和 app
+        for biz_name, biz_cfg in biz_db_configs.items():
+            if biz_cfg["db_url"] == self.DB_URL:
+                # 与系统相同 URL，合并到默认连接
+                default_models.append(biz_cfg["models"])
+                continue
+            conn_name = f"conn_{biz_name}"
+            connections[conn_name] = biz_cfg["db_url"]
+            apps[f"app_{biz_name}"] = {
+                "models": [biz_cfg["models"]],
+                "default_connection": conn_name,
+                "migrations": f"migrations.app_{biz_name}",
+            }
+
         self.TORTOISE_ORM = {
-            "connections": {"conn_system": self.DB_URL},
-            "apps": {"app_system": {"models": models, "default_connection": "conn_system", "migrations": "migrations.app_system"}},
+            "connections": connections,
+            "apps": apps,
             "use_tz": False,
             "timezone": "Asia/Shanghai",
         }

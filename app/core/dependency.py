@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.cache import get_role_apis, get_user_button_codes, get_user_role_codes
 from app.core.code import Code
 from app.core.config import APP_SETTINGS
+from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, CTX_USER, CTX_USER_ID, CTX_X_REQUEST_ID
 from app.core.exceptions import BizError
 from app.core.log import log
@@ -15,7 +16,7 @@ from app.system.models import StatusType, User
 from app.system.radar.ctx import CTX_RADAR
 from app.system.radar.developer import radar_log
 
-oauth2_schema = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+oauth2_schema = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 def check_token(token: str) -> tuple[bool, str, Any]:
@@ -37,7 +38,7 @@ class AuthControl:
         if not token:
             raise BizError(code=Code.INVALID_TOKEN, msg="认证失败，请求中不存在令牌")
         user_id = CTX_USER_ID.get()
-        if user_id == 0:
+        if user_id is None:
             status, code, decode_data = check_token(token)
             if not status:
                 raise BizError(code=code, msg=decode_data)
@@ -53,10 +54,15 @@ class AuthControl:
 
             # 校验 token 版本号
             redis = request.app.state.redis
-            token_version_in_jwt = decode_data["data"].get("tokenVersion", 0)
-            current_version = int(await redis.get(f"token_version:{user_id}") or 0)
-            if token_version_in_jwt < current_version:
-                raise BizError(code=Code.SESSION_INVALIDATED, msg="Token已失效，请重新登录")
+            try:
+                token_version_in_jwt = decode_data["data"].get("tokenVersion", 0)
+                current_version = int(await redis.get(f"token_version:{user_id}") or 0)
+                if token_version_in_jwt < current_version:
+                    raise BizError(code=Code.SESSION_INVALIDATED, msg="Token已失效，请重新登录")
+            except BizError:
+                raise
+            except Exception:
+                log.warning(f"Redis unavailable during token version check for user {user_id}, skipping version validation")
 
         user = await User.filter(id=user_id).first()
         if not user:
@@ -66,11 +72,20 @@ class AuthControl:
         CTX_USER_ID.set(uid)
         CTX_USER.set(user)
 
-        # 从 Redis 加载角色、按钮权限、首页路由到上下文
+        # 从 Redis 加载角色、按钮权限到上下文，Redis 不可用时从数据库降级加载
         redis = request.app.state.redis
-        role_codes = await get_user_role_codes(redis, uid)
+        try:
+            role_codes = await get_user_role_codes(redis, uid)
+            button_codes = await get_user_button_codes(redis, uid)
+        except Exception:
+            log.warning(f"Redis unavailable, loading permissions from database for user {uid}")
+            await user.fetch_related("by_user_roles")
+            role_codes = [r.role_code for r in user.by_user_roles]
+            button_codes = []
+            for role in user.by_user_roles:
+                await role.fetch_related("by_role_buttons")
+                button_codes.extend([b.button_code for b in role.by_role_buttons])
         CTX_ROLE_CODES.set(role_codes)
-        button_codes = await get_user_button_codes(redis, uid)
         CTX_BUTTON_CODES.set(button_codes)
 
         # 写入 radar 上下文，记录操作人信息
@@ -85,7 +100,7 @@ class PermissionControl:
     @classmethod
     async def has_permission(cls, request: Request, current_user: User = Depends(AuthControl.is_authed)) -> None:
         role_codes = CTX_ROLE_CODES.get()
-        if "R_SUPER" in role_codes:
+        if SUPER_ADMIN_ROLE in role_codes:
             return
 
         if not role_codes:
@@ -136,7 +151,7 @@ def require_buttons(*button_codes: str, require_all: bool = False):
 
     async def _checker(_: User = Depends(AuthControl.is_authed)) -> None:
         role_codes = CTX_ROLE_CODES.get()
-        if "R_SUPER" in role_codes:
+        if SUPER_ADMIN_ROLE in role_codes:
             return
         owned = set(CTX_BUTTON_CODES.get() or [])
         if require_all:
@@ -158,7 +173,7 @@ def require_roles(*role_codes_required: str, require_all: bool = False):
 
     async def _checker(_: User = Depends(AuthControl.is_authed)) -> None:
         owned = set(CTX_ROLE_CODES.get() or [])
-        if "R_SUPER" in owned:
+        if SUPER_ADMIN_ROLE in owned:
             return
         if require_all:
             missing = [c for c in role_codes_required if c not in owned]

@@ -43,13 +43,49 @@ def _discover_modules() -> list[str]:
 
 
 def discover_business_models() -> list[str]:
-    """返回用于 Tortoise ORM 注册的模型模块路径列表。"""
+    """返回用于 Tortoise ORM 注册的模型模块路径列表（使用默认连接）。"""
     model_modules = []
     for name in _discover_modules():
-        # 同时支持 models.py 和 models/ 包两种形式
         if (BUSINESS_ROOT / name / "models.py").exists() or (BUSINESS_ROOT / name / "models" / "__init__.py").exists():
             model_modules.append(f"app.business.{name}.models")
     return model_modules
+
+
+def discover_business_db_configs() -> dict[str, dict]:
+    """发现业务模块中声明了独立数据库连接的配置。
+
+    每个业务模块的 ``config.py`` 可声明 ``DB_URL`` 字段。若存在且与
+    系统默认连接不同，则自动注册为独立的 Tortoise 连接。
+
+    返回::
+
+        {
+            "hr": {"db_url": "postgres://...", "models": "app.business.hr.models"},
+        }
+    """
+    configs: dict[str, dict] = {}
+    for name in _discover_modules():
+        config_path = BUSINESS_ROOT / name / "config.py"
+        if not config_path.exists():
+            continue
+        has_models = (BUSINESS_ROOT / name / "models.py").exists() or (BUSINESS_ROOT / name / "models" / "__init__.py").exists()
+        if not has_models:
+            continue
+
+        try:
+            module = importlib.import_module(f"app.business.{name}.config")
+        except ImportError:
+            continue
+
+        # 查找模块级 Settings 实例中的 DB_URL
+        for attr_name in dir(module):
+            obj = getattr(module, attr_name, None)
+            if obj is not None and hasattr(obj, "DB_URL"):
+                db_url = getattr(obj, "DB_URL", None)
+                if db_url:
+                    configs[name] = {"db_url": db_url, "models": f"app.business.{name}.models"}
+                break
+    return configs
 
 
 def discover_business_routers() -> tuple[APIRouter, list[str]]:
@@ -57,17 +93,31 @@ def discover_business_routers() -> tuple[APIRouter, list[str]]:
 
     返回聚合后的路由对象和已发现的模块名称列表。
     """
+    from app.core.log import log  # 延迟导入
+
     parent_router = APIRouter()
     names: list[str] = []
     for name in _discover_modules():
+        module_path = BUSINESS_ROOT / name
+        has_api_file = (module_path / "api.py").exists()
+        has_api_pkg = (module_path / "api" / "__init__.py").exists()
+
+        if not has_api_file and not has_api_pkg:
+            log.warning(f"Business: module '{name}' discovered but has no api.py or api/ package — routes will not be registered")
+            continue
+
         try:
             module = importlib.import_module(f"app.business.{name}.api")
         except ImportError:
+            log.warning(f"Business: module '{name}' has api module but failed to import", exc_info=True)
             continue
+
         router = getattr(module, "router", None)
         if isinstance(router, APIRouter):
             parent_router.include_router(router)
             names.append(name)
+        else:
+            log.warning(f"Business: module '{name}' api module does not export a valid 'router' (APIRouter) object")
     return parent_router, names
 
 

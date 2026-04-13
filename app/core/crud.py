@@ -2,6 +2,7 @@ from typing import Any, Generic, NewType, TypeVar
 
 from pydantic import BaseModel
 from tortoise.expressions import Q
+from tortoise.functions import Count
 from tortoise.models import Model
 from tortoise.transactions import in_transaction
 
@@ -27,8 +28,8 @@ def get_db_conn(model: type[Model]) -> str:
 
 
 def _get_current_user() -> str | None:
-    user_id = CTX_USER_ID.get(0)
-    return str(user_id) if user_id else None
+    user_id = CTX_USER_ID.get()
+    return str(user_id) if user_id is not None else None
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
@@ -74,8 +75,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             query = query.select_related(*select_related)
 
         if count_by_pk_field:
-            total = await query.values_list(self.model._meta.pk_attr, flat=True)
-            total = len(set(total))
+            pk_attr = self.model._meta.pk_attr
+            result = await query.annotate(distinct_count=Count(pk_attr, distinct=True)).values("distinct_count")
+            total = result[0]["distinct_count"] if result else 0
         else:
             total = await query.count()
 

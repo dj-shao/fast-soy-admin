@@ -2,7 +2,8 @@ from fastapi import APIRouter, Query, Request
 
 from app.core.base_schema import Success
 from app.core.cache import get_constant_routes, get_role_menu_ids, get_user_role_home
-from app.core.ctx import CTX_ROLE_CODES, CTX_USER_ID
+from app.core.constants import SUPER_ADMIN_ROLE
+from app.core.ctx import CTX_ROLE_CODES, get_current_user_id
 from app.core.dependency import DependAuth
 from app.system.controllers import menu_controller
 from app.system.models import IconType, Menu
@@ -76,8 +77,8 @@ async def _(request: Request):
     """
     redis = request.app.state.redis
     role_codes = CTX_ROLE_CODES.get()
-    role_home = await get_user_role_home(redis, CTX_USER_ID.get())
-    is_super = "R_SUPER" in role_codes
+    role_home = await get_user_role_home(redis, get_current_user_id())
+    is_super = SUPER_ADMIN_ROLE in role_codes
 
     if is_super:
         role_routes: list[Menu] = await Menu.filter(constant=False)

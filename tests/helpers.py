@@ -1,3 +1,4 @@
+from app.core.constants import SUPER_ADMIN_ROLE
 from app.system.controllers import role_controller, user_controller
 from app.system.models import Menu, MenuType, Role, StatusType, User
 from app.system.schemas.users import UserCreate
@@ -20,21 +21,21 @@ async def _ensure_home_menu() -> Menu:
 
 async def seed_super_admin() -> User:
     """Create the super admin role + Soybean user. Returns the user object."""
-    role = await role_controller.get_by_code("R_SUPER")
+    role = await role_controller.get_by_code(SUPER_ADMIN_ROLE)
     user = await user_controller.get_by_username("Soybean")
     if user:
         return user
 
     home_menu = await _ensure_home_menu()
     if not role:
-        role = await Role.create(role_name="超级管理员", role_code="R_SUPER", role_desc="超级管理员", by_role_home=home_menu)
+        role = await Role.create(role_name="超级管理员", role_code=SUPER_ADMIN_ROLE, role_desc="超级管理员", by_role_home=home_menu)
 
     user = await user_controller.create(
         UserCreate(
             userName="Soybean",  # type: ignore
             userEmail="admin@admin.com",  # type: ignore
             password="123456",
-            byUserRoleCodeList=["R_SUPER"],  # type: ignore
+            byUserRoleCodeList=[SUPER_ADMIN_ROLE],  # type: ignore
         )
     )
     await user.by_user_roles.add(role)
@@ -46,7 +47,7 @@ async def seed_roles() -> list[Role]:
     home_menu = await _ensure_home_menu()
     roles = []
     for name, code, desc in [
-        ("超级管理员", "R_SUPER", "超级管理员"),
+        ("超级管理员", SUPER_ADMIN_ROLE, "超级管理员"),
         ("管理员", "R_ADMIN", "管理员"),
         ("普通用户", "R_USER", "普通用户"),
     ]:

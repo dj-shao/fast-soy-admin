@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request
 
 from app.core.base_schema import Fail, Success
 from app.core.code import Code
-from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, CTX_USER_ID
+from app.core.constants import SUPER_ADMIN_ROLE
+from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, get_current_user_id
 from app.core.dependency import DependAuth, DependPermission, check_token
 from app.core.exceptions import BizError
 from app.core.log import log
@@ -137,12 +138,12 @@ async def _(jwt_token: JWTOut, request: Request):
 
 @router.get("/user-info", summary="查看用户信息", dependencies=[DependAuth])
 async def _():
-    user_id = CTX_USER_ID.get()
+    user_id = get_current_user_id()
     user_obj: User = await user_controller.get(id=user_id)
     data = await user_obj.to_dict(exclude_fields=["id", "password", "created_at", "updated_at", "created_by", "updated_by"])
 
     role_codes = CTX_ROLE_CODES.get()
-    button_codes = [b.button_code for b in await Button.all()] if "R_SUPER" in role_codes else CTX_BUTTON_CODES.get()
+    button_codes = [b.button_code for b in await Button.all()] if SUPER_ADMIN_ROLE in role_codes else CTX_BUTTON_CODES.get()
 
     data.update({"userId": user_id, "roles": role_codes, "buttons": button_codes})
 
@@ -157,7 +158,7 @@ async def _():
 
 @router.patch("/password", summary="修改密码", dependencies=[DependAuth])
 async def _(body: UpdatePassword, request: Request):
-    user_id = CTX_USER_ID.get()
+    user_id = get_current_user_id()
     user_obj = await user_controller.get(id=user_id)
 
     if not verify_password(body.old_password, user_obj.password):
@@ -179,10 +180,10 @@ async def _(body: UpdatePassword, request: Request):
 async def _(user_id: int, request: Request):
     """超级管理员模拟登录为指定用户，无需密码"""
     role_codes = CTX_ROLE_CODES.get()
-    if "R_SUPER" not in role_codes:
+    if SUPER_ADMIN_ROLE not in role_codes:
         return Fail(code=Code.SUPER_ADMIN_ONLY, msg="仅超级管理员可以模拟登录")
 
-    impersonator_id = CTX_USER_ID.get()
+    impersonator_id = get_current_user_id()
     try:
         tokens = await impersonate_user(
             request.app.state.redis,

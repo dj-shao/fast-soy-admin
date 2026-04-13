@@ -4,6 +4,7 @@ from tortoise.transactions import in_transaction
 from app.core.base_schema import Fail, Success
 from app.core.cache import load_role_permissions
 from app.core.code import Code
+from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.crud import get_db_conn
 from app.core.router import CRUDRouter, SearchFieldConfig
 from app.system.controllers import menu_controller, role_controller
@@ -56,7 +57,7 @@ async def _update_role(item_id: int, obj_in: RoleUpdate, request: Request):
 @router.get("/roles/{role_id}/menus", summary="查看角色菜单")
 async def _(role_id: int):
     role_obj = await Role.get(id=role_id).prefetch_related("by_role_home")
-    if role_obj.role_code == "R_SUPER":
+    if role_obj.role_code == SUPER_ADMIN_ROLE:
         menu_objs = await menu_controller.model.filter(constant=False)
     else:
         menu_objs = await role_obj.by_role_menus
@@ -97,7 +98,7 @@ async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
 @router.get("/roles/{role_id}/buttons", summary="查看角色按钮")
 async def _(role_id: int):
     role_obj = await role_controller.get(id=role_id)
-    if role_obj.role_code == "R_SUPER":
+    if role_obj.role_code == SUPER_ADMIN_ROLE:
         button_objs = await Button.all()
     else:
         button_objs = await role_obj.by_role_buttons
@@ -125,7 +126,7 @@ async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
 @router.get("/roles/{role_id}/apis", summary="查看角色API")
 async def _(role_id: int):
     role_obj = await role_controller.get(id=role_id)
-    if role_obj.role_code == "R_SUPER":
+    if role_obj.role_code == SUPER_ADMIN_ROLE:
         api_objs = await Api.all()
     else:
         api_objs = await role_obj.by_role_apis

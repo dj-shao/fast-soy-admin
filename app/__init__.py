@@ -72,7 +72,14 @@ async def _run_init_data(_app: FastAPI) -> bool:
             await init_users()
 
             for init_fn in discover_business_init_data():
-                await init_fn()
+                try:
+                    await init_fn()
+                except Exception:
+                    module_name = getattr(init_fn, "__module__", "unknown")
+                    log.exception(f"Business: init() failed for module '{module_name}'")
+                    if not hasattr(_app.state, "init_errors"):
+                        _app.state.init_errors = []
+                    _app.state.init_errors.append(module_name)
 
             await refresh_all_cache(redis)
             await redis.set(_INIT_DONE_KEY, "1", ex=_INIT_LOCK_TIMEOUT)

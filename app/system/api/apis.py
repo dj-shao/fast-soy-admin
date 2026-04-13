@@ -1,6 +1,7 @@
 from tortoise.expressions import Q
 
 from app.core.base_schema import CommonIds, Success, SuccessExtra
+from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_ROLE_CODES
 from app.core.router import CRUDRouter, SearchFieldConfig
 from app.system.api.utils import generate_tags_recursive_list, refresh_api_list
@@ -46,7 +47,7 @@ async def _list_apis(obj_in: ApiSearch):
     q &= Q(is_system=False)
 
     role_codes = CTX_ROLE_CODES.get()
-    if "R_SUPER" in role_codes:
+    if SUPER_ADMIN_ROLE in role_codes:
         total, api_objs = await api_controller.list(page=obj_in.current, page_size=obj_in.size, search=q, order=["tags", "id"])
     else:
         # 非超管：只返回角色关联的 API

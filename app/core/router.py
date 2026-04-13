@@ -165,6 +165,36 @@ class CRUDRouter:
 
     # ---- override 钩子 ----
 
+    def get_route_info(self, name: str) -> dict:
+        """获取指定标准路由的元信息，便于 override 时参考参数签名。
+
+        返回包含 path、methods、summary、signature 的字典::
+
+            >>> crud.get_route_info("list")
+            {
+                "path": "/roles/search",
+                "methods": {"POST"},
+                "summary": "查看角色列表",
+                "signature": "async def list_items(obj_in: RoleSearch) -> SuccessExtra"
+            }
+
+        Raises:
+            ValueError: 路由名不存在或未启用。
+        """
+        if name not in self._route_specs:
+            raise ValueError(f"Route '{name}' is not enabled or does not exist. Available: {sorted(self._route_specs.keys())}")
+        spec = dict(self._route_specs[name])
+        signatures = {
+            "list": f"async def list_items(obj_in: {self.list_schema.__name__})" if self.list_schema else "async def list_items()",
+            "get": "async def get_item(item_id: int)",
+            "create": f"async def create_item(obj_in: {self.create_schema.__name__})" if self.create_schema else "async def create_item()",
+            "update": f"async def update_item(item_id: int, obj_in: {self.update_schema.__name__})" if self.update_schema else "async def update_item(item_id: int)",
+            "delete": "async def delete_item(item_id: int)",
+            "batch_delete": "async def batch_delete(obj_in: CommonIds)",
+        }
+        spec["signature"] = signatures.get(name, "")
+        return spec
+
     def override(self, name: str) -> Callable:
         """装饰器: 用用户实现替换指定标准路由的默认实现。
 
@@ -173,6 +203,15 @@ class CRUDRouter:
 
         替换后仍保留 CRUDRouter 生成的 path / method / summary，用户只需提供
         函数体和参数签名。
+
+        各路由的标准参数签名（可通过 ``crud.get_route_info(name)`` 查看）::
+
+            list:         async def list_items(obj_in: <list_schema>)
+            get:          async def get_item(item_id: int)
+            create:       async def create_item(obj_in: <create_schema>)
+            update:       async def update_item(item_id: int, obj_in: <update_schema>)
+            delete:       async def delete_item(item_id: int)
+            batch_delete: async def batch_delete(obj_in: CommonIds)
         """
         if name not in self._route_specs:
             raise ValueError(f"Cannot override '{name}': route is not enabled or does not exist. Available: {sorted(self._route_specs.keys())}")

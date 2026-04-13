@@ -10,7 +10,22 @@ from app.core.tools import to_lower_camel_case
 
 
 class BaseModel(models.Model):
-    async def to_dict(self, include_fields: list[str] | None = None, exclude_fields: list[str] | None = None, m2m: bool = False):
+    async def to_dict(
+        self,
+        include_fields: list[str] | None = None,
+        exclude_fields: list[str] | None = None,
+        m2m: bool = False,
+        fmt_datetime: bool = True,
+    ):
+        """将模型实例转为 camelCase 字典。
+
+        Args:
+            include_fields: 仅包含指定字段（白名单）。
+            exclude_fields: 排除指定字段（黑名单）。
+            m2m: 是否同时序列化多对多关系。
+            fmt_datetime: 是否额外输出格式化时间字段（``fmtCreatedAt`` 等）。
+                为 False 时 datetime 仅输出毫秒时间戳。
+        """
         include_fields = include_fields or []
         exclude_fields = exclude_fields or []
 
@@ -19,7 +34,8 @@ class BaseModel(models.Model):
             if (not include_fields or field in include_fields) and (not exclude_fields or field not in exclude_fields):
                 value = getattr(self, field)
                 if isinstance(value, datetime):
-                    d[to_lower_camel_case("fmt_" + field)] = value.strftime(APP_SETTINGS.DATETIME_FORMAT)
+                    if fmt_datetime:
+                        d[to_lower_camel_case("fmt_" + field)] = value.strftime(APP_SETTINGS.DATETIME_FORMAT)
                     value = int(value.timestamp() * 1000)
                 elif isinstance(value, UUID):
                     value = str(value)
@@ -37,7 +53,8 @@ class BaseModel(models.Model):
                         _value = value.copy()
                         for k, v in _value.items():
                             if isinstance(v, datetime):
-                                d[to_lower_camel_case("fmt_" + field)] = v.strftime(APP_SETTINGS.DATETIME_FORMAT)
+                                if fmt_datetime:
+                                    d[to_lower_camel_case("fmt_" + field)] = v.strftime(APP_SETTINGS.DATETIME_FORMAT)
                                 v = int(v.timestamp() * 1000)
                             elif isinstance(v, UUID):
                                 v = str(v)
