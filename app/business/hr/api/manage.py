@@ -68,6 +68,12 @@ async def _get_employee(item_id: int):
     record["departmentName"] = emp.department.name
     record["skillIds"] = [s.id for s in emp.skills]
     record["skillNames"] = [s.name for s in emp.skills]
+    # 保持与列表接口一致的 status 映射
+    from app.business.hr.services import _EMPLOYEE_STATUS_TO_ENABLE
+
+    raw_status = record.get("status", "")
+    record["employeeStatus"] = raw_status
+    record["status"] = _EMPLOYEE_STATUS_TO_ENABLE.get(raw_status, "2")
     return Success(data=record)
 
 

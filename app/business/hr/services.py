@@ -101,6 +101,14 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
     )
 
 
+_EMPLOYEE_STATUS_TO_ENABLE: dict[str, str] = {
+    "active": "1",
+    "pending": "2",
+    "onboarding": "2",
+    "resigned": "2",
+}
+
+
 async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
     """员工分页列表 — 使用 select_related/prefetch_related 优化 N+1 查询 + 行级数据权限。"""
     q = employee_controller.build_search(search_in, contains_fields=["name", "email"], exact_fields=["status"], range_fields=["created_at"])
@@ -125,6 +133,11 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
         record["departmentName"] = emp.department.name
         record["skillIds"] = [s.id for s in emp.skills]
         record["skillNames"] = [s.name for s in emp.skills]
+        # 前端 statusTypeRecord 期望 EnableStatus ('1'/'2')，
+        # 将 EmployeeStatus 映射为兼容值，原始状态保留在 employeeStatus
+        raw_status = record.get("status", "")
+        record["employeeStatus"] = raw_status
+        record["status"] = _EMPLOYEE_STATUS_TO_ENABLE.get(raw_status, "2")
         records.append(record)
     return total, records
 
