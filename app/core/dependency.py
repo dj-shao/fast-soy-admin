@@ -10,7 +10,6 @@ from app.core.config import APP_SETTINGS
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, CTX_USER, CTX_USER_ID, CTX_X_REQUEST_ID
 from app.core.exceptions import BizError
-from app.core.log import log
 from app.core.tools import check_url
 from app.system.models import StatusType, User
 from app.system.radar.ctx import CTX_RADAR
@@ -62,7 +61,7 @@ class AuthControl:
             except BizError:
                 raise
             except Exception:
-                log.warning(f"Redis unavailable during token version check for user {user_id}, skipping version validation")
+                radar_log(f"Redis unavailable during token version check for user {user_id}, skipping version validation", level="WARNING")
 
         user = await User.filter(id=user_id).first()
         if not user:
@@ -78,7 +77,7 @@ class AuthControl:
             role_codes = await get_user_role_codes(redis, uid)
             button_codes = await get_user_button_codes(redis, uid)
         except Exception:
-            log.warning(f"Redis unavailable, loading permissions from database for user {uid}")
+            radar_log(f"Redis unavailable, loading permissions from database for user {uid}", level="WARNING")
             await user.fetch_related("by_user_roles")
             role_codes = [r.role_code for r in user.by_user_roles]
             button_codes = []
@@ -123,7 +122,6 @@ class PermissionControl:
                     raise BizError(code=Code.API_DISABLED, msg=f"该接口已被禁用，method: {method} path: {path}")
                 return
 
-        log.error(f"Permission denied, method: {method.upper()} path: {path}, x-request-id: {CTX_X_REQUEST_ID.get()}")
         radar_log("权限拒绝", level="ERROR", data={"method": method.upper(), "path": path, "xRequestId": CTX_X_REQUEST_ID.get()})
         raise BizError(code=Code.PERMISSION_DENIED, msg=f"权限不足，method: {method} path: {path}")
 

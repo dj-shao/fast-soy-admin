@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -41,6 +42,15 @@ def create_app() -> FastAPI:
         )
     else:
         _app = FastAPI(title=APP_SETTINGS.APP_TITLE, description=APP_SETTINGS.APP_DESCRIPTION, version=APP_SETTINGS.VERSION, openapi_url=None, middleware=make_middlewares(), lifespan=lifespan)
+
+    # guard_core 初始化时会添加自己的 StreamHandler（导致双重输出）并输出冗长的 pipeline 信息
+    # 清掉其 handler（由根 logger 的 InterceptHandler 统一转发即可），并抑制 INFO 级别
+    if APP_SETTINGS.GUARD_ENABLED:
+        guard_logger = logging.getLogger("guard_core")
+        guard_logger.handlers.clear()
+        guard_logger.setLevel(logging.WARNING)
+        log.info("fastapi-guard 已启动")
+
     register_db(_app)
     register_exceptions(_app)
     register_routers(_app, prefix="/api")

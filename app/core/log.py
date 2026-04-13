@@ -65,6 +65,7 @@ class Logger:
             logging_logger = logging.getLogger(logger_name)
             logging_logger.handlers = [InterceptHandler()]
 
+
     def get_logger(self):
         return self.logger
 

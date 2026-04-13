@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.autodiscover import discover_business_db_configs, discover_business_models
 
@@ -65,10 +65,11 @@ class Settings(BaseSettings):
     GUARD_AUTO_BAN_THRESHOLD: int = 10
     GUARD_AUTO_BAN_DURATION: int = 21600
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @model_validator(mode="after")
     def _build_tortoise_orm(self) -> "Settings":

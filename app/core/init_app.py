@@ -1,3 +1,5 @@
+import logging
+
 import orjson
 import pretty_errors
 from fastapi import FastAPI
@@ -94,6 +96,10 @@ def make_middlewares():
         Middleware(RequestIDMiddleware),
     ]
     if APP_SETTINGS.GUARD_ENABLED:
+        # 预先在 guard_core logger 上注入 filter，阻止初始化时输出冗长的 pipeline 信息
+        # setup_custom_logging 只会 clear handlers，不会 clear filters
+        _guard_logger = logging.getLogger("guard_core")
+        _guard_logger.addFilter(lambda r: "Security pipeline initialized" not in r.getMessage())
         middleware.append(Middleware(SecurityMiddleware, config=_make_guard_config()))
 
     if APP_SETTINGS.RADAR_ENABLED:

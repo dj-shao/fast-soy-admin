@@ -13,7 +13,7 @@ import random
 
 from redis.asyncio import Redis
 
-from app.core.log import log
+from app.system.radar.developer import radar_log
 
 # Redis key 前缀和过期时间
 _CAPTCHA_PREFIX = "captcha:"
@@ -47,7 +47,7 @@ async def send_captcha(redis: Redis, phone: str) -> bool:
     await redis.set(f"{_CAPTCHA_PREFIX}{phone}", code, ex=_CAPTCHA_EXPIRE)
 
     # ========== 占位：打印到日志，生产环境替换为真实发送 ==========
-    log.info(f"[CAPTCHA] 验证码已生成 phone={phone} code={code} (开发模式，未真实发送)")
+    radar_log("验证码已生成 (开发模式，未真实发送)", data={"phone": phone, "code": code})
     # ==========================================================
 
     return True

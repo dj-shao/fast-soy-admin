@@ -6,7 +6,6 @@ from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, get_current_user_id
 from app.core.dependency import DependAuth, DependPermission, check_token
 from app.core.exceptions import BizError
-from app.core.log import log
 from app.system.controllers import user_controller
 from app.system.models import Button, Role, StatusType, User
 from app.system.radar.developer import radar_log
@@ -34,7 +33,6 @@ async def _(credentials: CredentialsSchema, request: Request):
         password=credentials.password,
     )
 
-    log.info(f"用户登录成功, 用户名: {user_obj.user_name}")
     radar_log("用户登录成功", data={"userName": user_obj.user_name, "userId": user_obj.id})
     result = tokens.model_dump(by_alias=True)
     result["mustChangePassword"] = user_obj.must_change_password
@@ -69,7 +67,6 @@ async def _(login_in: CodeLoginSchema, request: Request):
     token_version = await get_token_version(redis, user_obj.id)
     tokens = build_tokens(user_obj, token_version)
 
-    log.info(f"验证码登录成功, 手机号: {login_in.phone}")
     radar_log("验证码登录成功", data={"phone": login_in.phone, "userId": user_obj.id})
     return Success(data=tokens.model_dump(by_alias=True))
 
@@ -99,7 +96,6 @@ async def _(register_in: RegisterSchema, request: Request):
     if default_role:
         await user_obj.by_user_roles.add(default_role)
 
-    log.info(f"用户注册成功, 手机号: {register_in.phone}, 用户名: {user_name}")
     radar_log("用户注册成功", data={"phone": register_in.phone, "userName": user_name, "userId": user_obj.id})
     return Success(msg="注册成功")
 
@@ -193,5 +189,5 @@ async def _(user_id: int, request: Request):
     except BizError as e:
         return Fail(code=e.code, msg=e.msg)
 
-    log.info(f"管理员模拟登录, 操作人ID: {impersonator_id}, 目标用户ID: {user_id}")
+    radar_log("管理员模拟登录", data={"impersonatorId": impersonator_id, "targetUserId": user_id})
     return Success(data=tokens.model_dump(by_alias=True))
