@@ -4,6 +4,7 @@ import click
 
 from app.cli.commands.gen import gen
 from app.cli.commands.init import init
+from app.cli.commands.initdb import initdb
 
 
 @click.group()
@@ -13,3 +14,4 @@ def cli():
 
 cli.add_command(init)
 cli.add_command(gen)
+cli.add_command(initdb)

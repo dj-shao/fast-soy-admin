@@ -13,6 +13,7 @@ def main():
         port=9999,
         interface=Interfaces.ASGI,
         workers=workers,
+        workers_kill_timeout=5,
         reload=False,
     )
     server.serve()
