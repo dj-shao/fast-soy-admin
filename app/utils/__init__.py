@@ -13,6 +13,7 @@ from app.core.base_model import BaseModel as BaseModel
 from app.core.base_model import IntEnum as IntEnum
 from app.core.base_model import StatusType as StatusType
 from app.core.base_model import StrEnum as StrEnum
+from app.core.base_model import TreeMixin as TreeMixin
 
 # ---- Schema 基类 ----
 from app.core.base_schema import CommonIds as CommonIds
@@ -47,10 +48,18 @@ from app.core.ctx import get_current_user_id as get_current_user_id
 from app.core.ctx import has_button_code as has_button_code
 from app.core.ctx import has_role_code as has_role_code
 from app.core.ctx import is_super_admin as is_super_admin
+
+# ---- 数据权限 ----
+from app.core.data_scope import DataScopeType as DataScopeType
+from app.core.data_scope import build_scope_filter as build_scope_filter
 from app.core.dependency import DependAuth as DependAuth
 from app.core.dependency import DependPermission as DependPermission
 from app.core.dependency import require_buttons as require_buttons
 from app.core.dependency import require_roles as require_roles
+
+# ---- 事件总线 ----
+from app.core.events import emit as emit
+from app.core.events import on as on
 from app.core.exceptions import BizError as BizError
 from app.core.exceptions import SchemaValidationError as SchemaValidationError
 
@@ -58,6 +67,10 @@ from app.core.exceptions import SchemaValidationError as SchemaValidationError
 from app.core.log import log as log
 from app.core.router import CRUDRouter as CRUDRouter
 from app.core.router import SearchFieldConfig as SearchFieldConfig
+from app.core.soft_delete import SoftDeleteMixin as SoftDeleteMixin
+
+# ---- 状态机 ----
+from app.core.state_machine import StateMachine as StateMachine
 
 # ---- 数据工具 ----
 from app.core.tools import camel_case_convert as camel_case_convert

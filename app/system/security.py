@@ -1,10 +1,11 @@
 import jwt
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 
 from app.core.config import APP_SETTINGS
 from app.system.schemas.login import JWTPayload
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+_ph = PasswordHasher()
 
 
 def create_access_token(*, data: JWTPayload):
@@ -16,9 +17,12 @@ def create_access_token(*, data: JWTPayload):
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证明文密码与哈希密码是否匹配。"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return _ph.verify(hashed_password, plain_password)
+    except VerifyMismatchError:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """对明文密码进行哈希处理并返回哈希值。"""
-    return pwd_context.hash(password)
+    return _ph.hash(password)

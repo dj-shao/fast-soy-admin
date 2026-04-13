@@ -99,6 +99,7 @@ class Code:
     HR_EMPLOYEE_NOT_IN_DEPT = "2704"  # 该员工不在当前主管部门中
     HR_USER_NOT_EMPLOYEE = "2705"  # 当前用户未关联员工信息
     HR_MANAGER_ONLY = "2706"  # 仅部门主管可执行此操作
+    HR_INVALID_TRANSITION = "2707"  # 不允许的状态流转
 
     # ==== 3xxx 内部保留 ====
     # （暂未使用，为未来框架扩展预留）

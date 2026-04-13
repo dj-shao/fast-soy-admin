@@ -82,6 +82,10 @@ async def load_role_permissions(redis: Redis, role_code: str | None = None) -> N
         button_codes = [b.button_code for b in role.by_role_buttons]
         pipe.set(f"role:{code}:buttons", json.dumps(button_codes))
 
+        # 数据权限范围
+        data_scope_val = role.data_scope.value if hasattr(role.data_scope, "value") else str(role.data_scope)
+        pipe.set(f"role:{code}:data_scope", data_scope_val)
+
     await pipe.execute()
     count = len(roles)
     if role_code:

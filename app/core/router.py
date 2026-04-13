@@ -11,13 +11,19 @@ from app.core.crud import CRUDBase
 
 @dataclass
 class SearchFieldConfig:
-    """搜索字段配置，用于自动构建 Q 查询"""
+    """搜索字段配置，用于自动构建 Q 查询。
+
+    ``range_fields`` 约定：对列表中的 ``"created_at"``，schema 需包含
+    ``created_at_start``（映射为 ``created_at__gte``）和
+    ``created_at_end``（映射为 ``created_at__lte``），两者均为可选字段。
+    """
 
     contains_fields: list[str] = field(default_factory=list)
     icontains_fields: list[str] = field(default_factory=list)
     exact_fields: list[str] = field(default_factory=list)
     iexact_fields: list[str] = field(default_factory=list)
     in_fields: list[str] = field(default_factory=list)
+    range_fields: list[str] = field(default_factory=list)
 
 
 # 所有标准路由的名称（顺序即注册顺序）
@@ -102,6 +108,8 @@ class CRUDRouter:
         exclude_fields: list[str] | None = None,
         enable_routes: set[str] | None = None,
         record_transform: Callable | None = None,
+        soft_delete: bool = False,
+        tree_endpoint: bool = False,
     ):
         """
         Args:
@@ -118,6 +126,11 @@ class CRUDRouter:
                 list, get, create, update, delete, batch_delete。
             record_transform: 自定义记录转换函数，签名:
                 ``async def transform(obj) -> dict``。
+            soft_delete: 为 True 时删除/批量删除路由使用
+                ``controller.soft_remove()`` / ``controller.soft_batch_remove()``
+                而非物理删除。需要模型使用 ``SoftDeleteMixin``。
+            tree_endpoint: 为 True 时自动生成 ``GET /{resource}/tree`` 树形接口。
+                需要模型使用 ``TreeMixin``（包含 ``parent_id`` 字段）。
         """
         self.prefix = prefix
         self.controller = controller
@@ -129,6 +142,8 @@ class CRUDRouter:
         self.list_order = list_order or ["id"]
         self.exclude_fields = exclude_fields or []
         self.record_transform = record_transform
+        self.soft_delete = soft_delete
+        self.tree_endpoint = tree_endpoint
 
         # 资源名（从 prefix 提取，如 "/roles" → "roles"）
         self._resource = prefix.strip("/").split("/")[-1]
@@ -141,6 +156,8 @@ class CRUDRouter:
 
         self.router = _OrderedRouter()
         self._register_routes()
+        if self.tree_endpoint:
+            self._add_tree_route()
 
     # ---- 路由注册入口 ----
 
@@ -258,10 +275,12 @@ class CRUDRouter:
                 exact_fields=search_fields.exact_fields,
                 iexact_fields=search_fields.iexact_fields,
                 in_fields=search_fields.in_fields,
+                range_fields=search_fields.range_fields,
             )
             current = getattr(obj_in, "current", 1)
             size = getattr(obj_in, "size", 10)
-            total, objs = await controller.list(page=current, page_size=size, search=q, order=list_order)
+            order = getattr(obj_in, "order_by", None) or list_order
+            total, objs = await controller.list(page=current, page_size=size, search=q, order=order)
             records = [await to_record(obj) for obj in objs]
             return SuccessExtra(data={"records": records}, total=total, current=current, size=size)
 
@@ -329,9 +348,13 @@ class CRUDRouter:
 
     def _add_delete_route(self):
         controller = self.controller
+        use_soft = self.soft_delete
 
         async def delete_item(item_id: int):
-            await controller.remove(id=item_id)
+            if use_soft:
+                await controller.soft_remove(id=item_id)
+            else:
+                await controller.remove(id=item_id)
             return Success(msg="删除成功", data={"deletedId": item_id})
 
         self._register_spec(
@@ -344,9 +367,13 @@ class CRUDRouter:
 
     def _add_batch_delete_route(self):
         controller = self.controller
+        use_soft = self.soft_delete
 
         async def batch_delete(obj_in: CommonIds):
-            deleted_count = await controller.batch_remove(obj_in.ids)
+            if use_soft:
+                deleted_count = await controller.soft_batch_remove(obj_in.ids)
+            else:
+                deleted_count = await controller.batch_remove(obj_in.ids)
             return Success(msg="删除成功", data={"deletedCount": deleted_count, "deletedIds": obj_in.ids})
 
         self._register_spec(
@@ -356,3 +383,50 @@ class CRUDRouter:
             f"批量删除{self.summary_prefix}",
             batch_delete,
         )
+
+    # ---- 树形端点 ----
+
+    def _add_tree_route(self):
+        """注册 ``GET /{resource}/tree``，返回嵌套树结构。
+
+        需要模型含 ``parent_id`` 字段（``TreeMixin``）。
+        """
+        controller = self.controller
+        to_record = self._to_record
+        summary_prefix = self.summary_prefix
+
+        async def get_tree():
+            nodes = await controller.get_tree()
+            records = [await to_record(node) for node in nodes]
+            return Success(data=_build_nested_tree(records))
+
+        self.router.add_api_route(
+            f"/{self._resource}/tree",
+            get_tree,
+            methods=["GET"],
+            summary=f"查看{summary_prefix}树",
+        )
+
+
+def _build_nested_tree(
+    records: list[dict],
+    parent_id_key: str = "parentId",
+    root_value: int = 0,
+) -> list[dict]:
+    """将扁平 dict 列表组装为嵌套树结构。
+
+    每个 dict 需包含 ``id`` 和 ``parentId``（camelCase，来自 ``to_dict()``）。
+
+    Args:
+        records: ``to_dict()`` 产出的字典列表。
+        parent_id_key: 字典中父节点 ID 的键名（默认 camelCase ``parentId``）。
+        root_value: 顶级节点的 parent_id 值（默认 0）。
+    """
+    tree: list[dict] = []
+    for record in records:
+        if record.get(parent_id_key, root_value) == root_value:
+            children = _build_nested_tree(records, parent_id_key, record["id"])
+            if children:
+                record["children"] = children
+            tree.append(record)
+    return tree

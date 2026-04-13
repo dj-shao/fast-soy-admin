@@ -69,6 +69,25 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class TreeMixin:
+    """树形层级 Mixin — 为模型提供自引用层级结构。
+
+    ``parent_id=0`` 表示顶级节点（与 Menu 现有约定保持一致）。
+    ``level`` 为冗余字段，写入时需由业务逻辑设置为 ``parent.level + 1``（顶级为 1）。
+
+    注意：
+        Menu 模型已有 ``parent_id`` / ``order`` 字段，不应直接继承本 Mixin
+        以避免 Tortoise 字段声明冲突。新建业务模型推荐使用本 Mixin。
+    """
+
+    parent_id = fields.IntField(default=0, description="父节点ID，0表示顶级")
+    order = fields.IntField(default=0, description="同层排序")
+    level = fields.IntField(default=1, description="层级深度（1=顶级）")
+
+    class Meta:
+        abstract = True
+
+
 class AuditMixin:
     created_by = fields.CharField(max_length=64, null=True, description="创建人")
     created_at = fields.DatetimeField(auto_now_add=True, description="创建时间")
@@ -129,4 +148,4 @@ class IconType(str, Enum):
     local = "2"
 
 
-__all__ = ["BaseModel", "AuditMixin", "EnumBase", "IntEnum", "StrEnum", "MethodType", "StatusType", "GenderType", "MenuType", "IconType"]
+__all__ = ["BaseModel", "TreeMixin", "AuditMixin", "EnumBase", "IntEnum", "StrEnum", "MethodType", "StatusType", "GenderType", "MenuType", "IconType"]

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Generic, NewType, TypeVar
 
 from pydantic import BaseModel
@@ -152,6 +153,41 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def remove_by_filter(self, search: Q) -> int:
         return await self.model.filter(search).delete()
 
+    # ---- 软删除（需要模型使用 SoftDeleteMixin） ----
+
+    async def soft_remove(self, id: int) -> None:
+        """软删除：设置 ``deleted_at = now()``，不物理删除行。
+
+        要求模型包含 ``SoftDeleteMixin``（提供 ``deleted_at`` 字段）。
+        """
+        obj = await self.get(id=id)
+        update_fields = ["deleted_at"]
+        obj.deleted_at = datetime.now(tz=timezone.utc)  # type: ignore[attr-defined]
+        if "updated_by" in self.model._meta.db_fields:
+            obj.updated_by = _get_current_user()  # type: ignore[attr-defined]
+            update_fields.append("updated_by")
+        await obj.save(update_fields=update_fields)
+
+    # ---- 树形结构（需要模型使用 TreeMixin） ----
+
+    async def get_tree(self, search: Q = Q(), order: _list[str] | None = None) -> _list[ModelType]:
+        """获取所有节点（扁平列表），按 ``order`` + ``id`` 排序。
+
+        调用方负责将扁平列表组装为嵌套树结构（参见 ``CRUDRouter._build_nested_tree``）。
+        """
+        return await self.model.filter(search).order_by(*(order or ["order", "id"]))
+
+    async def get_children(self, parent_id: int, search: Q = Q()) -> _list[ModelType]:
+        """获取指定父节点的直接子节点。"""
+        return await self.model.filter(Q(parent_id=parent_id) & search).order_by("order", "id")
+
+    async def soft_batch_remove(self, ids: _list[int]) -> int:
+        """批量软删除。"""
+        updates: dict[str, Any] = {"deleted_at": datetime.now(tz=timezone.utc)}
+        if "updated_by" in self.model._meta.db_fields:
+            updates["updated_by"] = _get_current_user()
+        return await self.model.filter(id__in=ids).update(**updates)
+
     def build_search(
         self,
         obj_in: BaseModel,
@@ -160,6 +196,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         exact_fields: _list[str] | None = None,
         iexact_fields: _list[str] | None = None,
         in_fields: _list[str] | None = None,
+        range_fields: _list[str] | None = None,
         initial: Q | None = None,
         include_fields: set[str] | None = None,
         exclude_fields: set[str] | None = None,
@@ -175,6 +212,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             exact_fields: 精确匹配字段（大小写敏感）
             iexact_fields: 精确匹配字段（忽略大小写）
             in_fields: IN 查询字段（值为列表）
+            range_fields: 范围查询字段列表。对于 ``range_fields=["created_at"]``，
+                schema 中需提供 ``created_at_start``（→ ``created_at__gte``）和
+                ``created_at_end``（→ ``created_at__lte``），均为可选。
             initial: 初始 Q 对象
             include_fields: 仅处理指定字段（白名单），为 None 则处理所有
             exclude_fields: 排除指定字段（黑名单）
@@ -209,6 +249,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for field in in_fields or []:
             if _should_process(field):
                 q &= Q(**{f"{field}__in": data[field]})
+
+        for field in range_fields or []:
+            start_key = f"{field}_start"
+            end_key = f"{field}_end"
+            if _should_process(start_key):
+                q &= Q(**{f"{field}__gte": data[start_key]})
+            if _should_process(end_key):
+                q &= Q(**{f"{field}__lte": data[end_key]})
 
         if extra:
             q &= extra

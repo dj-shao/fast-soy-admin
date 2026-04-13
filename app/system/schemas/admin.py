@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 
 from app.core.base_schema import PageQueryBase, SchemaBase
 from app.core.code import Code
+from app.core.data_scope import DataScopeType
 from app.core.exceptions import SchemaValidationError
 from app.system.models import IconType, MenuType, StatusType
 
@@ -17,6 +18,7 @@ class RoleBase(SchemaBase):
     role_name: str | None = Field(None, title="角色名称")
     role_code: str | None = Field(None, title="角色编码")
     role_desc: str | None = Field(None, title="角色描述")
+    data_scope: DataScopeType | None = Field(None, title="数据权限范围")
     by_role_home_id: int | None = Field(None, title="角色首页")
     status_type: StatusType | None = Field(None, title="角色状态")
 

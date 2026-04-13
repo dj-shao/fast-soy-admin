@@ -2,10 +2,11 @@
 from tortoise import fields
 
 from app.core.base_model import AuditMixin, BaseModel, GenderType, IconType, MenuType, MethodType, StatusType
+from app.core.data_scope import DataScopeType
 
 
 class User(BaseModel, AuditMixin):
-    id = fields.IntField(pk=True, description="用户id")
+    id = fields.IntField(primary_key=True, description="用户id")
     user_name = fields.CharField(max_length=20, unique=True, description="用户名称")
     password = fields.CharField(max_length=128, description="密码")
     nick_name = fields.CharField(max_length=30, null=True, description="昵称")
@@ -33,10 +34,11 @@ class User(BaseModel, AuditMixin):
 
 
 class Role(BaseModel, AuditMixin):
-    id = fields.IntField(pk=True, description="角色id")
+    id = fields.IntField(primary_key=True, description="角色id")
     role_name = fields.CharField(max_length=20, unique=True, description="角色名称")
     role_code = fields.CharField(max_length=20, unique=True, description="角色编码")
     role_desc = fields.CharField(max_length=500, null=True, blank=True, description="角色描述")
+    data_scope = fields.CharEnumField(enum_type=DataScopeType, default=DataScopeType.all, description="数据权限范围")
     by_role_home: fields.ForeignKeyRelation["Menu"] = fields.ForeignKeyField("app_system.Menu", related_name=None, description="角色首页")
     status_type = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
 
@@ -56,7 +58,7 @@ class Role(BaseModel, AuditMixin):
 
 
 class Api(BaseModel, AuditMixin):
-    id = fields.IntField(pk=True, description="API id")
+    id = fields.IntField(primary_key=True, description="API id")
     api_path = fields.CharField(max_length=500, description="API路径")
     api_method = fields.CharEnumField(MethodType, description="请求方法")
     summary = fields.CharField(max_length=500, null=True, description="请求简介")
@@ -77,7 +79,7 @@ class Api(BaseModel, AuditMixin):
 
 
 class Menu(BaseModel, AuditMixin):
-    id = fields.IntField(pk=True, description="菜单id")
+    id = fields.IntField(primary_key=True, description="菜单id")
     menu_name = fields.CharField(max_length=100, description="菜单名称")
     menu_type = fields.CharEnumField(MenuType, description="菜单类型")
     route_name = fields.CharField(unique=True, max_length=100, description="路由名称")
@@ -111,7 +113,7 @@ class Menu(BaseModel, AuditMixin):
 
 
 class Button(BaseModel, AuditMixin):
-    id = fields.IntField(pk=True, description="按钮id")
+    id = fields.IntField(primary_key=True, description="按钮id")
     button_code = fields.CharField(max_length=200, description="按钮编码", db_index=True)
     button_desc = fields.CharField(max_length=200, description="按钮描述")
     status_type = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")

@@ -53,14 +53,14 @@ HR_ROLE_SEEDS = [
         "buttons": ["B_HR_CREATE", "B_HR_EDIT"],
         "apis": [
             ("post", "/api/v1/business/hr/employees"),
-            ("post", "/api/v1/business/hr/employees/all/"),
+            ("post", "/api/v1/business/hr/employees/search"),
             ("patch", "/api/v1/business/hr/employees/{emp_id}"),
             ("get", "/api/v1/business/hr/employees/{item_id}"),
             ("get", "/api/v1/business/hr/department/employees"),
-            ("post", "/api/v1/business/hr/departments/all/"),
+            ("post", "/api/v1/business/hr/departments/search"),
             ("patch", "/api/v1/business/hr/department/employees/{emp_id}/skills"),
             ("get", "/api/v1/business/hr/departments/stats"),
-            ("get", "/api/v1/business/hr/skills"),
+            ("post", "/api/v1/business/hr/skills/search"),
         ],
     }
 ]

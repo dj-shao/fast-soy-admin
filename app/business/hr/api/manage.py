@@ -11,12 +11,13 @@ from app.business.hr.schemas import (
     DepartmentUpdate,
     EmployeeCreate,
     EmployeeSearch,
+    EmployeeTransition,
     EmployeeUpdate,
     SkillCreate,
     SkillSearch,
     SkillUpdate,
 )
-from app.business.hr.services import create_employee, get_department_stats, list_employees_with_relations, update_employee
+from app.business.hr.services import create_employee, get_department_stats, list_employees_with_relations, transition_employee, update_employee
 from app.utils import (
     CTX_USER_ID,
     CRUDRouter,
@@ -35,6 +36,8 @@ dept_crud = CRUDRouter(
     list_schema=DepartmentSearch,
     search_fields=SearchFieldConfig(contains_fields=["name", "code"], exact_fields=["status"]),
     summary_prefix="部门",
+    soft_delete=True,
+    tree_endpoint=True,
 )
 
 skill_crud = CRUDRouter(
@@ -53,6 +56,7 @@ emp_crud = CRUDRouter(
     controller=employee_controller,
     list_schema=EmployeeSearch,
     summary_prefix="员工",
+    soft_delete=True,
 )
 
 
@@ -68,8 +72,8 @@ async def _get_employee(item_id: int):
 
 
 @emp_crud.override("list")
-async def _list_employees(obj_in: EmployeeSearch):
-    total, records = await list_employees_with_relations(obj_in)
+async def _list_employees(obj_in: EmployeeSearch, request: Request):
+    total, records = await list_employees_with_relations(obj_in, redis=request.app.state.redis)
     return SuccessExtra(data={"records": records}, total=total, current=obj_in.current, size=obj_in.size)
 
 
@@ -78,8 +82,9 @@ router = APIRouter(prefix="/hr", tags=["HR管理"], dependencies=[DependPermissi
 
 # 将具体路径定义在参数化路由（{item_id}）之前，以避免路由匹配冲突
 @router.get("/departments/stats", summary="部门统计")
-async def dept_stats():
-    stats = await get_department_stats()
+async def dept_stats(request: Request):
+    """部门统计 — 结果缓存在 Redis 中（5 分钟 TTL），员工数据变更时自动失效。"""
+    stats = await get_department_stats(redis=request.app.state.redis)
     return Success(data=stats)
 
 
@@ -109,3 +114,9 @@ async def create_emp(emp_in: EmployeeCreate, request: Request):
 @router.patch("/employees/{emp_id}", summary="更新员工")
 async def update_emp(emp_id: int, emp_in: EmployeeUpdate):
     return await update_employee(emp_id, emp_in)
+
+
+@router.post("/employees/{emp_id}/transition", summary="员工状态流转")
+async def transition_emp(emp_id: int, body: EmployeeTransition):
+    """状态流转: pending → onboarding → active → resigned"""
+    return await transition_employee(emp_id, body.to_state)

@@ -1,5 +1,6 @@
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.system.models import Button, Menu, Role
+from app.system.models.dictionary import Dictionary
 from app.system.services import ensure_menu, ensure_role, ensure_user
 from app.system.services.init_helper import _safe_update_or_create
 
@@ -8,13 +9,13 @@ SYSTEM_ROLE_SEEDS = [
         "role_name": "管理员",
         "role_code": "R_ADMIN",
         "role_desc": "管理员",
-        "menus": ["home", "about", "manage", "manage_user", "manage_user-detail", "manage_log"],
+        "menus": ["home", "about", "manage", "manage_user", "manage_user-detail"],
         "buttons": ["B_CODE2", "B_CODE3"],
         "apis": [
-            ("post", "/api/v1/users/all/"),
-            ("get", "/api/v1/users/{item_id}"),
-            ("post", "/api/v1/users"),
-            ("patch", "/api/v1/users/{user_id}"),
+            ("post", "/api/v1/system-manage/users/search"),
+            ("get", "/api/v1/system-manage/users/{item_id}"),
+            ("post", "/api/v1/system-manage/users"),
+            ("patch", "/api/v1/system-manage/users/{item_id}"),
         ],
     },
     {
@@ -411,6 +412,33 @@ async def _ensure_super_role() -> None:
         await super_role.by_role_buttons.add(button_obj)  # type: ignore[attr-defined]
 
 
+DICTIONARY_SEEDS = [
+    # skill_category — HR 标签分类
+    {"dict_type": "skill_category", "label": "工作方式", "value": "working_style", "order": 1},
+    {"dict_type": "skill_category", "label": "协作习惯", "value": "collaboration", "order": 2},
+    {"dict_type": "skill_category", "label": "团队角色", "value": "team_role", "order": 3},
+    {"dict_type": "skill_category", "label": "业务方向", "value": "business", "order": 4},
+    {"dict_type": "skill_category", "label": "成长方向", "value": "growth", "order": 5},
+    # employee_position — HR 员工职位
+    {"dict_type": "employee_position", "label": "技术主管", "value": "tech_lead", "order": 1},
+    {"dict_type": "employee_position", "label": "前端工程师", "value": "frontend_engineer", "order": 2},
+    {"dict_type": "employee_position", "label": "后端工程师", "value": "backend_engineer", "order": 3},
+    {"dict_type": "employee_position", "label": "市场主管", "value": "marketing_lead", "order": 4},
+    {"dict_type": "employee_position", "label": "市场专员", "value": "marketing_specialist", "order": 5},
+    {"dict_type": "employee_position", "label": "行政专员", "value": "admin_specialist", "order": 6},
+]
+
+
+async def _init_dictionaries() -> None:
+    """初始化系统字典数据"""
+    for seed in DICTIONARY_SEEDS:
+        await _safe_update_or_create(
+            Dictionary,
+            {"dict_type": seed["dict_type"], "value": seed["value"]},
+            {"label": seed["label"], "order": seed["order"]},
+        )
+
+
 async def init_users():
     await _ensure_super_role()
 
@@ -419,3 +447,5 @@ async def init_users():
 
     for user_seed in SYSTEM_USER_SEEDS:
         await ensure_user(**user_seed)
+
+    await _init_dictionaries()

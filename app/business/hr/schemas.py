@@ -3,6 +3,8 @@
 Business schema example — 员工、部门、标签的请求/响应 Schema。
 """
 
+from datetime import datetime
+
 from pydantic import Field
 
 from app.utils import PageQueryBase, SchemaBase, StatusType
@@ -23,13 +25,19 @@ class DepartmentBase(SchemaBase):
 class DepartmentCreate(DepartmentBase):
     name: str = Field(title="部门名称")
     code: str = Field(title="部门编码")
+    parent_id: int = Field(0, title="父部门ID，0表示顶级")
+    order: int = Field(0, title="排序")
+    level: int = Field(1, title="层级深度")
 
 
-class DepartmentUpdate(DepartmentBase): ...
+class DepartmentUpdate(DepartmentBase):
+    parent_id: int | None = Field(None, title="父部门ID")
+    order: int | None = Field(None, title="排序")
+    level: int | None = Field(None, title="层级深度")
 
 
 class DepartmentSearch(DepartmentBase, PageQueryBase):
-    pass
+    parent_id: int | None = Field(None, title="父部门ID")
 
 
 # ============================================================
@@ -87,3 +95,11 @@ class SkillIds(SchemaBase):
 
 class EmployeeSearch(EmployeeBase, PageQueryBase):
     department_id: int | None = Field(None, title="部门ID")
+    created_at_start: datetime | None = Field(None, title="创建时间起始")
+    created_at_end: datetime | None = Field(None, title="创建时间结束")
+
+
+class EmployeeTransition(SchemaBase):
+    """员工状态流转请求"""
+
+    to_state: str = Field(title="目标状态", description="pending / onboarding / active / resigned")

@@ -34,9 +34,9 @@ def gen_schemas(module_name: str, models: list[ModelInfo]) -> str:
     import_lines = sorted(extra_imports)
 
     lines = [
-        '# pyright: reportIncompatibleVariableOverride=false',
+        "# pyright: reportIncompatibleVariableOverride=false",
         '"""',
-        f'{module_name} — 请求/响应 Schema。',
+        f"{module_name} — 请求/响应 Schema。",
         '"""',
         "",
     ]
@@ -112,7 +112,7 @@ def gen_schemas(module_name: str, models: list[ModelInfo]) -> str:
 
 def gen_controllers(module_name: str, models: list[ModelInfo]) -> str:
     model_names = ", ".join(m.name for m in models)
-    controller_lines = [f'{m.snake_name}_controller = CRUDBase(model={m.name})' for m in models]
+    controller_lines = [f"{m.snake_name}_controller = CRUDBase(model={m.name})" for m in models]
 
     lines = [
         '"""',
@@ -182,7 +182,7 @@ def gen_api_manage(module_name: str, models: list[ModelInfo], contains_map: dict
         # exact_fields: 有 enum_type 或 status 字段
         exact = [f.name for f in m.schema_fields if f.enum_type or f.name == "status"]
 
-        lines.append(f'{m.snake_name}_crud = CRUDRouter(')
+        lines.append(f"{m.snake_name}_crud = CRUDRouter(")
         lines.append(f'    prefix="/{m.plural_snake}",')
         lines.append(f"    controller={m.snake_name}_controller,")
         lines.append(f"    create_schema={m.name}Create,")
@@ -191,11 +191,11 @@ def gen_api_manage(module_name: str, models: list[ModelInfo], contains_map: dict
 
         sf_parts = []
         if contains:
-            sf_parts.append(f'contains_fields={contains}')
+            sf_parts.append(f"contains_fields={contains}")
         if exact:
-            sf_parts.append(f'exact_fields={exact}')
+            sf_parts.append(f"exact_fields={exact}")
         if sf_parts:
-            lines.append(f'    search_fields=SearchFieldConfig({", ".join(sf_parts)}),')
+            lines.append(f"    search_fields=SearchFieldConfig({', '.join(sf_parts)}),")
 
         lines.append(f'    summary_prefix="{m.cn_name}",')
         lines.append(")")

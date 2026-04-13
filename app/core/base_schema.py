@@ -19,10 +19,16 @@ class SchemaBase(BaseModel):
 
 
 class PageQueryBase(SchemaBase):
-    """分页查询基类 — 所有 POST /resources/search 接口的 body 应继承它"""
+    """分页查询基类 — 所有 POST /resources/search 接口的 body 应继承它。
+
+    ``order_by`` 允许前端指定排序字段，字段名前加 ``-`` 表示降序，
+    如 ``["-created_at", "name"]``。为 ``None`` 时使用 CRUDRouter 的
+    ``list_order`` 默认排序。
+    """
 
     current: int = Field(1, ge=1, title="页码")
     size: int = Field(10, ge=1, le=1000, title="每页数量")
+    order_by: list[str] | None = Field(None, title="排序字段列表")
 
 
 class Custom(JSONResponse):
