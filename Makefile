@@ -63,8 +63,15 @@ cli-init: ## Create a new business module skeleton (usage: make cli-init MOD=xxx
 	uv run python -m app.cli init $(MOD)
 
 .PHONY: cli-gen
-cli-gen: ## Generate code from models.py (usage: make cli-gen MOD=xxx)
+cli-gen: ## Generate backend code from models.py (usage: make cli-gen MOD=xxx)
 	uv run python -m app.cli gen $(MOD)
+
+.PHONY: cli-gen-web
+cli-gen-web: ## Generate frontend code from models.py (usage: make cli-gen-web MOD=xxx [CN=中文名])
+	uv run python -m app.cli gen-web $(MOD) $(if $(CN),--cn-name $(CN),)
+
+.PHONY: cli-gen-all
+cli-gen-all: cli-gen cli-gen-web ## Generate both backend and frontend code (usage: make cli-gen-all MOD=xxx [CN=中文名])
 
 # ── Frontend ─────────────────────────────────────────────────
 

@@ -35,9 +35,8 @@ FastSoyAdmin 是一套开箱即用的全栈后台模板：
 
 ## 特性
 
-- **RBAC 权限体系** · 菜单 / API / 按钮三级权限，超级管理员可越权放行
-- **CLI 代码生成** · 从 Tortoise 模型一键生成后端 API 与前端 CRUD 页面（含 i18n）
-- **自动路由** · Elegant Router 从文件结构自动生成前端路由；后端动态路由注入
+- **RBAC 权限体系** · 菜单 / API / 按钮三级权限
+- **CLI 代码生成** · 从 Tortoise ORM 模型一键生成后端 API 与前端 CRUD 页面（含 i18n）
 - **模块自动发现** · `app/business/` 下的模块零注册，启动时自动加载
 - **Redis 缓存** · fastapi-cache2 + Redis，加速接口响应
 - **统一响应** · 所有接口返回 `{code, msg, data}`，snake_case ↔ camelCase 自动转换
@@ -57,11 +56,11 @@ FastSoyAdmin 是一套开箱即用的全栈后台模板：
 
 ### 环境要求
 
-| 工具 | 版本 |
-|---|---|
-| Python | >= 3.12 |
-| Node.js | >= 20 |
-| uv · pnpm · make | 最新 |
+| 工具             | 版本    |
+| ---------------- | ------- |
+| Python           | >= 3.12 |
+| Node.js          | >= 20   |
+| uv · pnpm · make | 最新    |
 
 ### Docker 部署（推荐）
 
@@ -87,14 +86,16 @@ make dev             # 同时起后端(:9999) 和前端(:9527)
 
 项目通过 `Makefile` 封装全部常用命令。运行 `make help` 可查看完整列表。
 
-| 命令 | 作用 |
-|---|---|
-| `make dev` | 同时启动后端 + 前端开发服务器 |
-| `make check-all` | 跑完后端 + 前端所有质量检查（提交前） |
-| `make mm` | 生成并应用数据库迁移（makemigrations + migrate） |
-| `make cli-init MOD=xxx` | 创建业务模块骨架 |
-| `make cli-gen MOD=xxx` | 根据 `models.py` 生成后端代码 |
-| `make up` / `make down` / `make logs` | Docker 启停与日志 |
+| 命令                                   | 作用                                             |
+| -------------------------------------- | ------------------------------------------------ |
+| `make dev`                             | 同时启动后端 + 前端开发服务器                    |
+| `make check-all`                       | 跑完后端 + 前端所有质量检查（提交前）            |
+| `make mm`                              | 生成并应用数据库迁移（makemigrations + migrate） |
+| `make cli-init MOD=xxx`                | 创建业务模块骨架                                 |
+| `make cli-gen MOD=xxx`                 | 根据 `models.py` 生成后端代码                    |
+| `make cli-gen-web MOD=xxx [CN=中文名]` | 根据 `models.py` 生成前端代码                    |
+| `make cli-gen-all MOD=xxx [CN=中文名]` | 一次生成前后端代码                               |
+| `make up` / `make down` / `make logs`  | Docker 启停与日志                                |
 
 完整清单参见 [命令参考文档](https://sleep1223.github.io/fast-soy-admin-docs/backend/commands)。
 
@@ -103,12 +104,11 @@ make dev             # 同时起后端(:9999) 和前端(:9527)
 以新增 `inventory`（库存管理）模块为例：
 
 ```bash
-make cli-init MOD=inventory                                  # 1. 创建模块骨架
-$EDITOR app/business/inventory/models.py                     # 2. 定义 Tortoise 模型
-make cli-gen MOD=inventory                                   # 3. 生成后端代码
-uv run python -m app.cli gen-web inventory --cn-name 库存管理  # 4. 生成前端代码
-make mm                                                      # 5. 执行迁移
-make dev                                                     # 6. 启动验证
+make cli-init MOD=inventory                      # 1. 创建模块骨架
+$EDITOR app/business/inventory/models.py         # 2. 定义 Tortoise 模型
+make cli-gen-all MOD=inventory CN=库存管理       # 3. 生成前后端代码（== cli-gen + cli-gen-web）
+make mm                                          # 4. 执行迁移
+make dev                                         # 5. 启动验证
 ```
 
 详细流程与字段类型映射见 [开发指南](https://sleep1223.github.io/fast-soy-admin-docs/backend/development)。
@@ -117,15 +117,15 @@ make dev                                                     # 6. 启动验证
 
 所有接口返回统一格式 `{"code": "xxxx", "msg": "...", "data": ...}`。码段约定：
 
-| 段 | 含义 | 前端行为 |
-|---|---|---|
-| `0000` | 成功 | 正常处理 |
-| `1xxx` | 系统内部错误（校验、数据库、序列化） | 框架自动弹错 |
-| `21xx` | 认证失败 | 跳转登录或自动刷新 token |
-| `22xx` | 授权失败（RBAC） | 显示错误消息 |
-| `23xx` | 资源冲突（唯一键） | 显示错误消息 |
-| `24xx` | 通用业务失败 | 显示错误消息 |
-| `4000–9999` | 用户自定义 | 业务自行处理 |
+| 段          | 含义                                 | 前端行为                 |
+| ----------- | ------------------------------------ | ------------------------ |
+| `0000`      | 成功                                 | 正常处理                 |
+| `1xxx`      | 系统内部错误（校验、数据库、序列化） | 框架自动弹错             |
+| `21xx`      | 认证失败                             | 跳转登录或自动刷新 token |
+| `22xx`      | 授权失败（RBAC）                     | 显示错误消息             |
+| `23xx`      | 资源冲突（唯一键）                   | 显示错误消息             |
+| `24xx`      | 通用业务失败                         | 显示错误消息             |
+| `4000–9999` | 用户自定义                           | 业务自行处理             |
 
 详细码表见 [响应码文档](https://sleep1223.github.io/fast-soy-admin-docs/backend/codes)。
 
@@ -144,7 +144,7 @@ make dev                                                     # 6. 启动验证
 - [x] 使用 Redis 优化响应速度
 - [x] Docker 一键部署
 - [x] CLI 代码生成器（后端 + 前端）
-- [ ] 集成 FastCRUD
+- [ ] 端对端测试
 
 ## 贡献
 

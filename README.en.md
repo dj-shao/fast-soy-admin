@@ -29,18 +29,17 @@ FastSoyAdmin is a ready-to-use full-stack admin scaffold:
 
 - **Backend**: FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **Frontend**: Vue3 · Vite7 · TypeScript · Naive UI · UnoCSS · Pinia
-- **Code generator**: `make cli-init` → write models → `make cli-gen` → generates schemas / controllers / API / frontend views (with i18n snippets)
+- **Code generator**: `make cli-init` → write models → `make cli-gen` → produces schemas / controllers / api / frontend views end-to-end
 
-Great as a starting point for internal tools and as a learning reference for modern full-stack development.
+Great as a starting point for internal tools, and as a learning reference for modern full-stack development.
 
 ## Features
 
-- **RBAC** · menu / API / button level permissions; super admin bypasses all checks
-- **CLI code generation** · one command turns Tortoise models into a full CRUD stack (backend + frontend + i18n)
-- **Automatic routing** · Elegant Router derives frontend routes from files; dynamic routes are injected from the backend
-- **Auto module discovery** · drop a package under `app/business/` and it is loaded at startup, no registration
+- **RBAC** · menu / API / button level permissions
+- **CLI code generation** · turn Tortoise ORM models into a full backend API + frontend CRUD stack (with i18n) in one command
+- **Auto module discovery** · drop a package under `app/business/` and it is loaded at startup — no registration
 - **Redis caching** · fastapi-cache2 + Redis for faster API responses
-- **Unified responses** · every endpoint returns `{code, msg, data}`; automatic snake_case ↔ camelCase
+- **Unified responses** · every endpoint returns `{code, msg, data}`; automatic snake_case ↔ camelCase conversion
 - **Strict typing** · vue-tsc on the frontend, basedpyright on the backend
 - **i18n** · vue-i18n with zh / en; the CLI emits i18n snippets for new modules
 - **One-command Docker** · Nginx + FastAPI + Redis out of the box
@@ -53,15 +52,15 @@ Great as a starting point for internal tools and as a learning reference for mod
 - [Commands Reference](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/commands)
 - [Apifox API docs](https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b)
 
-## Getting started
+## Getting Started
 
 ### Requirements
 
-| Tool | Version |
-|---|---|
-| Python | >= 3.12 |
-| Node.js | >= 20 |
-| uv · pnpm · make | latest |
+| Tool             | Version |
+| ---------------- | ------- |
+| Python           | >= 3.12 |
+| Node.js          | >= 20   |
+| uv · pnpm · make | latest  |
 
 ### Docker (recommended)
 
@@ -83,18 +82,20 @@ make initdb          # first-time database initialization
 make dev             # start backend (:9999) and frontend (:9527) together
 ```
 
-## Common commands
+## Common Commands
 
-All frequently used commands are wrapped in `Makefile`. Run `make help` to see the full list.
+All frequently used commands are wrapped in `Makefile`. Run `make help` for the full list.
 
-| Command | Purpose |
-|---|---|
-| `make dev` | Run backend + frontend dev servers together |
-| `make check-all` | Run all backend + frontend quality gates (before committing) |
-| `make mm` | Make + apply database migrations |
-| `make cli-init MOD=xxx` | Scaffold a new business module |
-| `make cli-gen MOD=xxx` | Generate backend code from `models.py` |
-| `make up` / `make down` / `make logs` | Docker lifecycle |
+| Command                                | Purpose                                          |
+| -------------------------------------- | ------------------------------------------------ |
+| `make dev`                             | Run backend + frontend dev servers together     |
+| `make check-all`                       | Run all backend + frontend quality gates (pre-commit) |
+| `make mm`                              | Generate + apply database migrations (makemigrations + migrate) |
+| `make cli-init MOD=xxx`                | Scaffold a new business module                  |
+| `make cli-gen MOD=xxx`                 | Generate backend code from `models.py`          |
+| `make cli-gen-web MOD=xxx [CN=name]`   | Generate frontend code from `models.py`         |
+| `make cli-gen-all MOD=xxx [CN=name]`   | Generate both backend and frontend at once      |
+| `make up` / `make down` / `make logs`  | Docker lifecycle                                |
 
 See the [Commands Reference](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/commands) for the complete list.
 
@@ -103,35 +104,34 @@ See the [Commands Reference](https://sleep1223.github.io/fast-soy-admin-docs/en/
 End-to-end example for an `inventory` module:
 
 ```bash
-make cli-init MOD=inventory                                       # 1. scaffold
-$EDITOR app/business/inventory/models.py                          # 2. define Tortoise models
-make cli-gen MOD=inventory                                        # 3. generate backend
-uv run python -m app.cli gen-web inventory --cn-name Inventory    # 4. generate frontend
-make mm                                                           # 5. run migrations
-make dev                                                          # 6. verify
+make cli-init MOD=inventory                       # 1. scaffold
+$EDITOR app/business/inventory/models.py          # 2. define Tortoise models
+make cli-gen-all MOD=inventory CN=Inventory       # 3. generate both backend and frontend (== cli-gen + cli-gen-web)
+make mm                                           # 4. run migrations
+make dev                                          # 5. verify
 ```
 
 Full walkthrough and field type mappings: [Development Guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/development).
 
-## Response codes
+## Response Codes
 
 All endpoints share the shape `{"code": "xxxx", "msg": "...", "data": ...}`. Code ranges:
 
-| Range | Meaning | Frontend behavior |
-|---|---|---|
-| `0000` | Success | Normal processing |
-| `1xxx` | Internal errors (validation, DB, serialization) | Auto toast by the framework |
-| `21xx` | Authentication failure | Redirect to login or auto-refresh token |
-| `22xx` | Authorization failure (RBAC) | Show error toast |
-| `23xx` | Resource conflict (unique constraint) | Show error toast |
-| `24xx` | Generic business failure | Show error toast |
-| `4000–9999` | User-defined | Handled by callers |
+| Range       | Meaning                                         | Frontend behavior                  |
+| ----------- | ----------------------------------------------- | ---------------------------------- |
+| `0000`      | Success                                         | Normal processing                  |
+| `1xxx`      | Internal errors (validation, DB, serialization) | Auto-toasted by the framework      |
+| `21xx`      | Authentication failure                          | Redirect to login or refresh token |
+| `22xx`      | Authorization failure (RBAC)                    | Show error toast                   |
+| `23xx`      | Resource conflict (unique constraint)           | Show error toast                   |
+| `24xx`      | Generic business failure                        | Show error toast                   |
+| `4000–9999` | User-defined                                    | Handled by callers                 |
 
 See [Response Codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/codes).
 
 ## Frontend sync
 
-`web/` is maintained in a separate repo, [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend), which has **no common ancestor** with this one. Keeping it in sync requires a manual flow — look at previous commits prefixed with `chore(web): sync with fast-soy-admin-frontend@...` for the canonical recipe.
+`web/` is maintained in a separate repository, [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend), which has **no common ancestor** with this repo. Syncing upstream updates requires a manual workflow — see the (forthcoming) [frontend sync guide](.extra_repo/fast-soy-admin-docs/src/guide/frontend-sync.md) or the previous commits prefixed with `chore(web): sync with fast-soy-admin-frontend@...`.
 
 ## Screenshots
 
@@ -139,12 +139,12 @@ See [Response Codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/
 ![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-04.png)
 ![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-07.png)
 
-## Roadmap
+## TODO
 
 - [x] Redis caching
 - [x] One-command Docker deploy
 - [x] CLI code generator (backend + frontend)
-- [ ] FastCRUD integration
+- [ ] End-to-end tests
 
 ## Contributing
 
