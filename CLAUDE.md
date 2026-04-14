@@ -19,7 +19,7 @@ python run.py
 ruff check app/                # lint
 ruff format app/               # format
 # 类型检查
-pyright app/
+basedpyright app/
 # 单元测试
 pytest tests/ -v
 ```
@@ -227,7 +227,7 @@ router = crud.router
 ```bash
 ruff check app/               # lint
 ruff format app/              # format
-pyright app                   # 类型检查（严格模式）
+basedpyright app              # 类型检查
 pytest tests/ -v              # 单元测试
 ```
 
@@ -243,7 +243,7 @@ pnpm typecheck                # vue-tsc 类型检查
 
 - `.env` — SECRET_KEY、APP_DEBUG、CORS、Redis URL、数据库路径
 - `ruff.toml` — 行宽 200，规则 E/F/I，使用双引号
-- Pyright 对 `app/` 目录启用严格模式
+- basedpyright 对 `app/` 目录启用 standard 模式（配置节 `[tool.basedpyright]`）
 
 ## 部署
 

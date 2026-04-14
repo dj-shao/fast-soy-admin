@@ -28,13 +28,13 @@ async def get_current_employee(user: User = Depends(AuthControl.is_authed)) -> E
     emp = await Employee.filter(user_id=user.id).select_related("department").first()
     if not emp:
         raise BizError(code=Code.HR_USER_NOT_EMPLOYEE, msg="当前用户未关联员工信息")
-    set_department_id(emp.department_id)  # type: ignore[arg-type]
+    set_department_id(emp.department_id)
     return emp
 
 
 async def get_department_manager(emp: Employee = Depends(get_current_employee)) -> Employee:
     """校验当前员工是否为部门主管"""
-    is_mgr = await Department.filter(id=emp.department_id, manager_id=emp.id).exists()  # type: ignore[arg-type]
+    is_mgr = await Department.filter(id=emp.department_id, manager_id=emp.id).exists()
     if not is_mgr:
         raise BizError(code=Code.HR_MANAGER_ONLY, msg="仅部门主管可执行此操作")
     return emp

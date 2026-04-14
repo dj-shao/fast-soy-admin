@@ -18,7 +18,7 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板。前端基于 Vue
 - **完整的权限体系**：基于 RBAC 模型，前后端角色权限严格分离，后端对 API 和按钮级别进行二次鉴权
 - **Redis 缓存加速**：集成 fastapi-cache2 + Redis，有效提升接口响应速度
 - **清晰的项目结构**：pnpm monorepo 管理，后端分层架构（Router → Controller → CRUD/Model）
-- **严格的代码规范**：前端 ESLint + oxlint + simple-git-hooks；后端 Ruff + Pyright
+- **严格的代码规范**：前端 ESLint + oxlint + simple-git-hooks；后端 Ruff + basedpyright
 - **TypeScript 全覆盖**：支持严格类型检查
 - **丰富的主题配置**：内置多套主题方案，与 UnoCSS 深度集成
 - **国际化支持**：vue-i18n 多语言方案（中文 / English）
@@ -28,7 +28,7 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板。前端基于 Vue
 
 ### 技术栈
 
-**后端**：Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x, Redis (fastapi-cache2), Argon2, PyJWT (HS256), uv, Ruff, Pyright
+**后端**：Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x, Redis (fastapi-cache2), Argon2, PyJWT (HS256), uv, Ruff, basedpyright
 
 **前端**：Vue 3.5, Vite 7, TypeScript 5.9, Naive UI 2.44, Pinia 3, UnoCSS, Alova, Elegant Router, vue-i18n, ECharts 6
 
@@ -397,7 +397,7 @@ uv sync                     # 安装依赖
 uv run python run.py         # 启动 (:9999)
 ruff check app/              # lint
 ruff format app/             # format
-pyright app                  # 类型检查
+basedpyright app             # 类型检查
 pytest tests/ -v             # 测试
 tortoise makemigrations      # 生成迁移
 tortoise migrate             # 执行迁移

@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # logs - 普通日志保留时间, 支持: seconds/minutes/hours/days/weeks/months/years (如 "30 days", "1 months", "2 weeks")
     LOG_INFO_RETENTION: str = "30 days"
 
+    # 反向代理 — 启用后由 granian.utils.proxies 从 X-Forwarded-For / X-Forwarded-Proto
+    # 还原真实客户端 IP 与协议。生产环境部署在 Nginx 之后务必启用。
+    # TRUSTED_HOSTS 接受单 IP/CIDR 列表，例如 ["127.0.0.1", "10.0.0.0/8"]；
+    # 设为 ["*"] 将信任所有上游（仅在确认无法被外网直连时使用）。
+    PROXY_HEADERS_ENABLED: bool = False
+    TRUSTED_HOSTS: list[str] = Field(default_factory=lambda: ["127.0.0.1"])
+
     # fastapi-guard
     GUARD_ENABLED: bool = True
     GUARD_RATE_LIMIT: int = 100

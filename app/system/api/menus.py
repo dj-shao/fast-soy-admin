@@ -72,9 +72,12 @@ async def _create_menu(menu_in: MenuCreate):
         return Fail(code=Code.DUPLICATE_MENU_ROUTE, msg=f"路由路径 {menu_in.route_path} 已存在")
 
     if menu_in.active_menu:
-        menu_in.active_menu = await menu_controller.get(menu_name=menu_in.active_menu)  # pyright: ignore[reportAttributeAccessIssue]
-
-    new_menu = await menu_controller.create(obj_in=menu_in, exclude={"buttons"})
+        active_menu_obj = await menu_controller.get(menu_name=menu_in.active_menu)
+        obj_dict = menu_in.model_dump(exclude_unset=True, exclude_none=True, exclude={"buttons", "active_menu"})
+        obj_dict["active_menu_id"] = active_menu_obj.id
+        new_menu = await menu_controller.create(obj_in=obj_dict)
+    else:
+        new_menu = await menu_controller.create(obj_in=menu_in, exclude={"buttons"})
     if new_menu and menu_in.by_menu_buttons:
         await menu_controller.update_buttons_by_code(new_menu, menu_in.by_menu_buttons)
     return Success(msg="创建成功", data={"createdId": new_menu.id})

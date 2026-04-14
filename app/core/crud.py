@@ -94,7 +94,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         return Total(total), result
 
-    async def create(self, obj_in: CreateSchemaType, exclude: set[str] | None = None) -> ModelType:
+    async def create(self, obj_in: CreateSchemaType | dict[str, Any], exclude: set[str] | None = None) -> ModelType:
         if isinstance(obj_in, dict):
             obj_dict = obj_in
         else:

@@ -137,10 +137,11 @@ class PrettyErrorsMiddleware(BaseHTTPMiddleware):
             sys.stderr.flush()
 
             # 调试模式下在响应中返回纯文本（去除 ANSI 转义码）
+            details: str | None
             if APP_SETTINGS.APP_DEBUG:
                 ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
-                details: str | None = ansi_escape.sub("", f"{msg}\n{output}")
+                details = ansi_escape.sub("", f"{msg}\n{output}")
             else:
-                details: str | None = None
+                details = None
 
             return await BaseHandle(request, exc, Exception, "5001", f"服务器内部错误: {exc.__class__.__name__}", 200, details=details)

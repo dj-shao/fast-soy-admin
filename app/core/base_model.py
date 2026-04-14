@@ -1,3 +1,4 @@
+# pyright: reportIncompatibleVariableOverride=false
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
@@ -65,7 +66,7 @@ class BaseModel(models.Model):
                     d[to_lower_camel_case(field)] = values
         return d
 
-    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+    class Meta:
         abstract = True
 
 

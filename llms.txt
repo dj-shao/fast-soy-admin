@@ -50,7 +50,7 @@ Full docs: [llms-full.md](llms-full.md)
 - [Overview](fastsoy-admin-docs/src/standard/index.md): Code standards overview
 - [Naming](fastsoy-admin-docs/src/standard/naming.md): Frontend and backend naming conventions
 - [Vue Style](fastsoy-admin-docs/src/standard/vue.md): SFC script order, template rules
-- [Backend Style](fastsoy-admin-docs/src/standard/backend.md): Python code style, Ruff, Pyright
+- [Backend Style](fastsoy-admin-docs/src/standard/backend.md): Python code style, Ruff, basedpyright
 
 ### Other
 - [FAQ](fastsoy-admin-docs/src/faq/index.md): Common issues and solutions
@@ -59,7 +59,7 @@ Full docs: [llms-full.md](llms-full.md)
 
 Backend: Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x, Redis, Argon2, JWT (HS256)
 Frontend: Vue 3.5, Vite 7, TypeScript 5, Naive UI, Pinia, UnoCSS, Alova, Elegant Router, vue-i18n
-DevOps: Docker Compose (Nginx + FastAPI + Redis), uv, pnpm monorepo, Ruff, Pyright, ESLint, oxlint
+DevOps: Docker Compose (Nginx + FastAPI + Redis), uv, pnpm monorepo, Ruff, basedpyright, ESLint, oxlint
 
 ## Architecture
 

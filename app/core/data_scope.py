@@ -66,10 +66,10 @@ def build_scope_filter(
     if is_super_admin() or scope == DataScopeType.all:
         return Q()
     if scope == DataScopeType.department and department_id is not None:
-        return Q(**{dept_id_field: department_id})  # type: ignore[arg-type]
+        return Q(dept_id_field=department_id)
     # self / custom fallback — 仅看自己的数据
     if user_id is not None:
-        return Q(**{user_id_field: user_id})  # type: ignore[arg-type]
+        return Q(user_id_field=user_id)
     return Q()
 
 

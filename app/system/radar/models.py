@@ -33,6 +33,7 @@ class RadarRequest(BaseModel):
 
 class RadarQuery(BaseModel):
     id = fields.IntField(primary_key=True)
+    request_id: int
     request = fields.ForeignKeyField("app_system.RadarRequest", related_name="queries", on_delete=fields.CASCADE, description="关联请求")
     sql_text = fields.TextField(description="SQL语句")
     params = fields.TextField(null=True, description="绑定参数")
@@ -50,6 +51,7 @@ class RadarQuery(BaseModel):
 
 class RadarUserLog(BaseModel):
     id = fields.IntField(primary_key=True)
+    request_id: int | None
     request = fields.ForeignKeyField("app_system.RadarRequest", related_name="user_logs", on_delete=fields.CASCADE, null=True, description="关联请求")
     level = fields.CharField(max_length=10, default="INFO", description="日志级别")
     message = fields.TextField(description="日志消息")

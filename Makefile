@@ -25,8 +25,8 @@ fmt: ## Ruff auto-fix + format
 	uv run ruff format app/
 
 .PHONY: typecheck
-typecheck: ## Pyright type check (strict)
-	uv run pyright app
+typecheck: ## basedpyright type check
+	uv run basedpyright app
 
 .PHONY: test
 test: ## Run backend tests

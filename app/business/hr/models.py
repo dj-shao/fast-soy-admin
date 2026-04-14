@@ -92,8 +92,10 @@ class Employee(BaseModel, AuditMixin, SoftDeleteMixin):
     status = fields.CharEnumField(enum_type=EmployeeStatus, default=EmployeeStatus.pending, description="员工状态")
 
     # FK: 员工 → 系统用户 (一对一)
+    user_id: int | None
     user: fields.ForeignKeyNullableRelation = fields.ForeignKeyField("app_system.User", null=True, unique=True, on_delete=fields.SET_NULL, related_name="employee", description="关联系统用户")
     # FK: 员工 → 部门
+    department_id: int
     department: fields.ForeignKeyRelation[Department] = fields.ForeignKeyField("app_system.Department", related_name="employees", description="所属部门")
     # M2M: 员工 ↔ 标签
     skills: fields.ManyToManyRelation[Skill] = fields.ManyToManyField("app_system.Skill", related_name="employees", description="标签列表")

@@ -3,6 +3,7 @@
 import click
 
 from app.cli.commands.gen import gen
+from app.cli.commands.gen_web import gen_web
 from app.cli.commands.init import init
 from app.cli.commands.initdb import initdb
 
@@ -14,4 +15,5 @@ def cli():
 
 cli.add_command(init)
 cli.add_command(gen)
+cli.add_command(gen_web, name="gen-web")
 cli.add_command(initdb)

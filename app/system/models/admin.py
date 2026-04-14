@@ -39,6 +39,7 @@ class Role(BaseModel, AuditMixin):
     role_code = fields.CharField(max_length=20, unique=True, description="角色编码")
     role_desc = fields.CharField(max_length=500, null=True, blank=True, description="角色描述")
     data_scope = fields.CharEnumField(enum_type=DataScopeType, default=DataScopeType.all, description="数据权限范围")
+    by_role_home_id: int
     by_role_home: fields.ForeignKeyRelation["Menu"] = fields.ForeignKeyField("app_system.Menu", related_name=None, description="角色首页")
     status_type = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
 
@@ -97,6 +98,7 @@ class Menu(BaseModel, AuditMixin):
     multi_tab = fields.BooleanField(default=False, description="是否支持多页签")
     keep_alive = fields.BooleanField(default=False, description="是否缓存")
     hide_in_menu = fields.BooleanField(default=False, description="是否在菜单隐藏")
+    active_menu_id: int | None
     active_menu: fields.ForeignKeyNullableRelation["Menu"] = fields.ForeignKeyField(to="app_system.Menu", related_name=None, null=True, description="隐藏的路由需要激活的菜单")
     fixed_index_in_tab = fields.IntField(null=True, max_length=10, description="固定在页签的序号")
     status_type = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="菜单状态")

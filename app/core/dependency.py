@@ -3,6 +3,7 @@ from typing import Any
 import jwt
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
+from jwt.types import Options as JwtOptions
 
 from app.core.cache import get_role_apis, get_user_button_codes, get_user_role_codes
 from app.core.code import Code
@@ -20,8 +21,8 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=F
 
 def check_token(token: str) -> tuple[bool, str, Any]:
     try:
-        options = {"verify_signature": True, "verify_aud": False, "exp": True}
-        decode_data = jwt.decode(token, APP_SETTINGS.SECRET_KEY, algorithms=[APP_SETTINGS.JWT_ALGORITHM], options=options)  # type: ignore[arg-type]
+        options: JwtOptions = {"verify_signature": True, "verify_aud": False, "verify_exp": True}
+        decode_data = jwt.decode(token, APP_SETTINGS.SECRET_KEY, algorithms=[APP_SETTINGS.JWT_ALGORITHM], options=options)
         return True, Code.SUCCESS, decode_data
     except jwt.DecodeError:
         return False, Code.INVALID_TOKEN, "无效的Token"

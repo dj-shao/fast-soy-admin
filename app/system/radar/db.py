@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timedelta
+from typing import cast
 
 from loguru import logger
 from tortoise.expressions import Q
@@ -279,8 +280,11 @@ async def query_dashboard_stats(hours: int = 1) -> dict:
     success_rate = round(success_count / req_count * 100, 2) if req_count else 100
 
     # 响应时间百分位数（P50、P95、P99）
-    raw_durations = await RadarRequest.filter(base_q & Q(duration_ms__not_isnull=True)).order_by("duration_ms").values_list("duration_ms", flat=True)
-    durations: list[float] = [float(d) for d in raw_durations if d is not None]  # type: ignore[arg-type]
+    raw_durations = cast(
+        "list[float | None]",
+        await RadarRequest.filter(base_q & Q(duration_ms__not_isnull=True)).order_by("duration_ms").values_list("duration_ms", flat=True),
+    )
+    durations: list[float] = [float(d) for d in raw_durations if d is not None]
     p50 = _percentile(durations, 50)
     p95 = _percentile(durations, 95)
     p99 = _percentile(durations, 99)
@@ -336,7 +340,10 @@ def _extract_business_code_and_msg(response_body: str | None) -> tuple[str | Non
 
 async def _build_code_distribution(base_q: Q) -> list[dict]:
     """从响应体 JSON 构建业务码分布统计。"""
-    rows = await RadarRequest.filter(base_q & Q(response_body__not_isnull=True)).values_list("response_body", flat=True)
+    rows = cast(
+        "list[str | None]",
+        await RadarRequest.filter(base_q & Q(response_body__not_isnull=True)).values_list("response_body", flat=True),
+    )
     counter: dict[str, int] = {}
     no_code_count = 0
     for body in rows:
@@ -344,7 +351,7 @@ async def _build_code_distribution(base_q: Q) -> list[dict]:
             no_code_count += 1
             continue
         try:
-            parsed = json.loads(body)  # type: ignore[arg-type]
+            parsed = json.loads(body)
             code = str(parsed.get("code", ""))
             if code:
                 counter[code] = counter.get(code, 0) + 1
