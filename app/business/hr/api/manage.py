@@ -4,7 +4,7 @@ HR 管理接口 — 部门/标签/员工的 CRUD (需要系统权限)。
 
 from fastapi import APIRouter, Request
 
-from app.business.hr.controllers import department_controller, employee_controller, skill_controller
+from app.business.hr.controllers import department_controller, employee_controller, tag_controller
 from app.business.hr.schemas import (
     DepartmentCreate,
     DepartmentSearch,
@@ -13,9 +13,9 @@ from app.business.hr.schemas import (
     EmployeeSearch,
     EmployeeTransition,
     EmployeeUpdate,
-    SkillCreate,
-    SkillSearch,
-    SkillUpdate,
+    TagCreate,
+    TagSearch,
+    TagUpdate,
 )
 from app.business.hr.services import create_employee, get_department_stats, list_employees_with_relations, transition_employee, update_employee
 from app.utils import (
@@ -40,12 +40,12 @@ dept_crud = CRUDRouter(
     tree_endpoint=True,
 )
 
-skill_crud = CRUDRouter(
-    prefix="/skills",
-    controller=skill_controller,
-    create_schema=SkillCreate,
-    update_schema=SkillUpdate,
-    list_schema=SkillSearch,
+tag_crud = CRUDRouter(
+    prefix="/tags",
+    controller=tag_controller,
+    create_schema=TagCreate,
+    update_schema=TagUpdate,
+    list_schema=TagSearch,
     search_fields=SearchFieldConfig(contains_fields=["name"], exact_fields=["category"]),
     summary_prefix="标签",
 )
@@ -66,8 +66,8 @@ async def _get_employee(item_id: int):
     await emp.fetch_related("department", "skills")
     record = await emp.to_dict()
     record["departmentName"] = emp.department.name
-    record["skillIds"] = [s.id for s in emp.skills]
-    record["skillNames"] = [s.name for s in emp.skills]
+    record["tagIds"] = [s.id for s in emp.skills]
+    record["tagNames"] = [s.name for s in emp.skills]
     # 保持与列表接口一致的 status 映射
     from app.business.hr.services import _EMPLOYEE_STATUS_TO_ENABLE
 
@@ -95,7 +95,7 @@ async def dept_stats(request: Request):
 
 
 router.include_router(dept_crud.router)
-router.include_router(skill_crud.router)
+router.include_router(tag_crud.router)
 router.include_router(emp_crud.router)
 
 

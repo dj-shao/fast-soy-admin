@@ -7,7 +7,7 @@ from tortoise.transactions import in_transaction
 
 from app.business.hr.cache_utils import invalidate_dept_stats
 from app.business.hr.config import BIZ_SETTINGS
-from app.business.hr.controllers import employee_controller, skill_controller
+from app.business.hr.controllers import employee_controller, tag_controller
 from app.business.hr.ctx import get_department_id
 from app.business.hr.models import Department, Employee
 from app.business.hr.schemas import EmployeeCreate, EmployeeSearch, EmployeeUpdate
@@ -56,7 +56,7 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
         return Fail(code=Code.HR_CREATE_FORBIDDEN, msg="无权限创建员工")
 
     # 2. 校验标签上限
-    if emp_in.skill_ids and len(emp_in.skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
+    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
         return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
 
     employee_no = await generate_employee_no()
@@ -77,14 +77,14 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
             return Fail(msg=str(e))
 
         # 创建员工 — employee_no/email/user_id 需要在 create 时设置（NOT NULL 字段）
-        emp_data = emp_in.model_dump(exclude_unset=True, exclude_none=True, exclude={"skill_ids", "password", "email", "user_name", "user_gender"})
+        emp_data = emp_in.model_dump(exclude_unset=True, exclude_none=True, exclude={"tag_ids", "password", "email", "user_name", "user_gender"})
         emp_data.update(employee_no=employee_no, email=emp_in.email, user_id=result.user.id)
         new_emp = await employee_controller.create(obj_in=emp_data)
 
         # 关联标签
-        if emp_in.skill_ids:
-            for sid in emp_in.skill_ids:
-                skill = await skill_controller.get(id=sid)
+        if emp_in.tag_ids:
+            for sid in emp_in.tag_ids:
+                skill = await tag_controller.get(id=sid)
                 await new_emp.skills.add(skill)
 
     radar_log("创建员工", data={"employeeId": new_emp.id, "employeeNo": employee_no, "userId": result.user.id})
@@ -131,8 +131,8 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
     for emp in employees:
         record = await emp.to_dict()
         record["departmentName"] = emp.department.name
-        record["skillIds"] = [s.id for s in emp.skills]
-        record["skillNames"] = [s.name for s in emp.skills]
+        record["tagIds"] = [s.id for s in emp.skills]
+        record["tagNames"] = [s.name for s in emp.skills]
         # 前端 statusTypeRecord 期望 EnableStatus ('1'/'2')，
         # 将 EmployeeStatus 映射为兼容值，原始状态保留在 employeeStatus
         raw_status = record.get("status", "")
@@ -144,27 +144,27 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
 
 async def update_employee(emp_id: int, emp_in: EmployeeUpdate):
     """更新员工信息 — 含标签关联更新"""
-    if emp_in.skill_ids and len(emp_in.skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
+    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
         return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
     async with in_transaction(get_db_conn(Employee)):
-        emp = await employee_controller.update(id=emp_id, obj_in=emp_in, exclude={"skill_ids"})
-        if emp_in.skill_ids is not None:
+        emp = await employee_controller.update(id=emp_id, obj_in=emp_in, exclude={"tag_ids"})
+        if emp_in.tag_ids is not None:
             await emp.skills.clear()
-            for sid in emp_in.skill_ids:
-                await emp.skills.add(await skill_controller.get(id=sid))
+            for sid in emp_in.tag_ids:
+                await emp.skills.add(await tag_controller.get(id=sid))
     radar_log("编辑员工", data={"employeeId": emp_id})
     await emit("employee.updated", employee_id=emp_id)
     return Success(msg="更新成功", data={"updated_id": emp_id})
 
 
-async def update_employee_skills(emp: Employee, skill_ids: list[int], *, log_label: str = "编辑标签", extra_log: dict[str, object] | None = None):
+async def update_employee_skills(emp: Employee, tag_ids: list[int], *, log_label: str = "编辑标签", extra_log: dict[str, object] | None = None):
     """通用标签更新 — 校验上限 + 清除重建 + 日志"""
-    if len(skill_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
+    if len(tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
         return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
     await emp.skills.clear()
-    for sid in skill_ids:
-        await emp.skills.add(await skill_controller.get(id=sid))
-    log_data: dict[str, object] = {"employeeId": emp.id, "skillIds": skill_ids}
+    for sid in tag_ids:
+        await emp.skills.add(await tag_controller.get(id=sid))
+    log_data: dict[str, object] = {"employeeId": emp.id, "tagIds": tag_ids}
     if extra_log:
         log_data.update(extra_log)
     radar_log(log_label, data=log_data)
@@ -186,17 +186,17 @@ async def list_department_employees(department_id: int, exclude_fields: list[str
     records = []
     for emp in employees:
         record = await emp.to_dict(exclude_fields=exclude_fields)
-        record["skillNames"] = [s.name for s in emp.skills]
+        record["tagNames"] = [s.name for s in emp.skills]
         records.append(record)
     return records
 
 
-async def edit_subordinate_skills(mgr: Employee, emp_id: int, skill_ids: list[int]):
+async def edit_subordinate_skills(mgr: Employee, emp_id: int, tag_ids: list[int]):
     """主管编辑下属标签"""
     target = await employee_controller.get_or_none(id=emp_id, department_id=mgr.department_id)  # type: ignore[attr-defined]
     if not target:
         return Fail(code=Code.HR_EMPLOYEE_NOT_IN_DEPT, msg="该员工不在您的部门中")
-    return await update_employee_skills(target, skill_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
+    return await update_employee_skills(target, tag_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
 
 
 async def transition_employee(emp_id: int, to_state: str):

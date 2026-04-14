@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter
 
 from app.business.hr.dependency import DependManager
-from app.business.hr.schemas import SkillIds
+from app.business.hr.schemas import TagIds
 
 if TYPE_CHECKING:
     from app.business.hr.models import Employee
@@ -26,7 +26,7 @@ async def dept_employees(mgr: Employee = DependManager):
     return Success(data=records)
 
 
-@router.patch("/department/employees/{emp_id}/skills", summary="[主管] 编辑下属标签")
-async def edit_employee_skills(emp_id: int, body: SkillIds, mgr: Employee = DependManager):
+@router.patch("/department/employees/{emp_id}/tags", summary="[主管] 编辑下属标签")
+async def edit_employee_tags(emp_id: int, body: TagIds, mgr: Employee = DependManager):
     """主管编辑同部门下属的标签"""
-    return await edit_subordinate_skills(mgr, emp_id, body.skill_ids)
+    return await edit_subordinate_skills(mgr, emp_id, body.tag_ids)

@@ -36,9 +36,9 @@ HR_MENU_CHILDREN = [
     },
     {
         "menu_name": "标签管理",
-        "route_name": "hr_skill",
-        "route_path": "/hr/skill",
-        "component": "view.hr_skill",
+        "route_name": "hr_tag",
+        "route_path": "/hr/tag",
+        "component": "view.hr_tag",
         "icon": "mdi:tag-multiple",
         "order": 3,
     },
@@ -49,7 +49,7 @@ HR_ROLE_SEEDS = [
         "role_name": "部门主管",
         "role_code": "R_DEPT_MGR",
         "role_desc": "部门主管，可管理本部门员工",
-        "menus": ["home", "hr", "hr_department", "hr_employee", "hr_skill"],
+        "menus": ["home", "hr", "hr_department", "hr_employee", "hr_tag"],
         "buttons": ["B_HR_CREATE", "B_HR_EDIT"],
         "apis": [
             ("post", "/api/v1/business/hr/employees"),
@@ -58,9 +58,9 @@ HR_ROLE_SEEDS = [
             ("get", "/api/v1/business/hr/employees/{item_id}"),
             ("get", "/api/v1/business/hr/department/employees"),
             ("post", "/api/v1/business/hr/departments/search"),
-            ("patch", "/api/v1/business/hr/department/employees/{emp_id}/skills"),
+            ("patch", "/api/v1/business/hr/department/employees/{emp_id}/tags"),
             ("get", "/api/v1/business/hr/departments/stats"),
-            ("post", "/api/v1/business/hr/skills/search"),
+            ("post", "/api/v1/business/hr/tags/search"),
         ],
     }
 ]
