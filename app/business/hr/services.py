@@ -56,8 +56,8 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
         return Fail(code=Code.HR_CREATE_FORBIDDEN, msg="无权限创建员工")
 
     # 2. 校验标签上限
-    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
+    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE:
+        return Fail(code=Code.HR_TAGS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE}")
 
     employee_no = await generate_employee_no()
 
@@ -83,9 +83,9 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
 
         # 关联标签
         if emp_in.tag_ids:
-            for sid in emp_in.tag_ids:
-                skill = await tag_controller.get(id=sid)
-                await new_emp.skills.add(skill)
+            for tid in emp_in.tag_ids:
+                tag = await tag_controller.get(id=tid)
+                await new_emp.tags.add(tag)
 
     radar_log("创建员工", data={"employeeId": new_emp.id, "employeeNo": employee_no, "userId": result.user.id})
     await emit("employee.created", employee_id=new_emp.id, employee_no=employee_no)
@@ -125,14 +125,14 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
         search=q,
         order=["id"],
         select_related=["department"],
-        prefetch_related=["skills"],
+        prefetch_related=["tags"],
     )
     records = []
     for emp in employees:
         record = await emp.to_dict()
         record["departmentName"] = emp.department.name
-        record["tagIds"] = [s.id for s in emp.skills]
-        record["tagNames"] = [s.name for s in emp.skills]
+        record["tagIds"] = [t.id for t in emp.tags]
+        record["tagNames"] = [t.name for t in emp.tags]
         # 前端 statusTypeRecord 期望 EnableStatus ('1'/'2')，
         # 将 EmployeeStatus 映射为兼容值，原始状态保留在 employeeStatus
         raw_status = record.get("status", "")
@@ -144,26 +144,26 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
 
 async def update_employee(emp_id: int, emp_in: EmployeeUpdate):
     """更新员工信息 — 含标签关联更新"""
-    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
+    if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE:
+        return Fail(code=Code.HR_TAGS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE}")
     async with in_transaction(get_db_conn(Employee)):
         emp = await employee_controller.update(id=emp_id, obj_in=emp_in, exclude={"tag_ids"})
         if emp_in.tag_ids is not None:
-            await emp.skills.clear()
+            await emp.tags.clear()
             for sid in emp_in.tag_ids:
-                await emp.skills.add(await tag_controller.get(id=sid))
+                await emp.tags.add(await tag_controller.get(id=sid))
     radar_log("编辑员工", data={"employeeId": emp_id})
     await emit("employee.updated", employee_id=emp_id)
     return Success(msg="更新成功", data={"updated_id": emp_id})
 
 
-async def update_employee_skills(emp: Employee, tag_ids: list[int], *, log_label: str = "编辑标签", extra_log: dict[str, object] | None = None):
+async def update_employee_tags(emp: Employee, tag_ids: list[int], *, log_label: str = "编辑标签", extra_log: dict[str, object] | None = None):
     """通用标签更新 — 校验上限 + 清除重建 + 日志"""
-    if len(tag_ids) > BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE:
-        return Fail(code=Code.HR_SKILLS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_SKILLS_PER_EMPLOYEE}")
-    await emp.skills.clear()
-    for sid in tag_ids:
-        await emp.skills.add(await tag_controller.get(id=sid))
+    if len(tag_ids) > BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE:
+        return Fail(code=Code.HR_TAGS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE}")
+    await emp.tags.clear()
+    for tid in tag_ids:
+        await emp.tags.add(await tag_controller.get(id=tid))
     log_data: dict[str, object] = {"employeeId": emp.id, "tagIds": tag_ids}
     if extra_log:
         log_data.update(extra_log)
@@ -173,30 +173,30 @@ async def update_employee_skills(emp: Employee, tag_ids: list[int], *, log_label
 
 async def get_employee_profile(emp: Employee):
     """获取员工完整信息 — 含部门和标签"""
-    await emp.fetch_related("department", "skills")
+    await emp.fetch_related("department", "tags")
     record = await emp.to_dict()
     record["departmentName"] = emp.department.name
-    record["skills"] = [await s.to_dict() for s in emp.skills]
+    record["tags"] = [await t.to_dict() for t in emp.tags]
     return record
 
 
 async def list_department_employees(department_id: int, exclude_fields: list[str] | None = None):
     """部门员工列表 — prefetch_related 加载标签"""
-    employees = await employee_controller.model.filter(department_id=department_id).prefetch_related("skills")
+    employees = await employee_controller.model.filter(department_id=department_id).prefetch_related("tags")
     records = []
     for emp in employees:
         record = await emp.to_dict(exclude_fields=exclude_fields)
-        record["tagNames"] = [s.name for s in emp.skills]
+        record["tagNames"] = [t.name for t in emp.tags]
         records.append(record)
     return records
 
 
-async def edit_subordinate_skills(mgr: Employee, emp_id: int, tag_ids: list[int]):
+async def edit_subordinate_tags(mgr: Employee, emp_id: int, tag_ids: list[int]):
     """主管编辑下属标签"""
     target = await employee_controller.get_or_none(id=emp_id, department_id=mgr.department_id)  # type: ignore[attr-defined]
     if not target:
         return Fail(code=Code.HR_EMPLOYEE_NOT_IN_DEPT, msg="该员工不在您的部门中")
-    return await update_employee_skills(target, tag_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
+    return await update_employee_tags(target, tag_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
 
 
 async def transition_employee(emp_id: int, to_state: str):

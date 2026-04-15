@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -6,8 +7,8 @@ from app.core.base_schema import SchemaBase
 
 
 class CredentialsSchema(SchemaBase):
-    user_name: str | None = Field(None, title="用户名")
-    password: str | None = Field(None, title="密码")
+    user_name: Annotated[str, Field(max_length=20)] | None = Field(None, title="用户名")
+    password: Annotated[str, Field(max_length=128)] | None = Field(None, title="密码")
 
 
 class JWTOut(SchemaBase):
@@ -22,19 +23,19 @@ class JWTPayload(BaseModel):
 
 
 class CaptchaRequest(SchemaBase):
-    phone: str = Field(title="手机号")
+    phone: Annotated[str, Field(max_length=20)] = Field(title="手机号")
 
 
 class CodeLoginSchema(SchemaBase):
-    phone: str = Field(title="手机号")
-    code: str = Field(title="验证码")
+    phone: Annotated[str, Field(max_length=20)] = Field(title="手机号")
+    code: Annotated[str, Field(max_length=10)] = Field(title="验证码")
 
 
 class RegisterSchema(SchemaBase):
-    phone: str = Field(title="手机号")
-    code: str = Field(title="验证码")
-    password: str = Field(title="密码")
-    user_name: str | None = Field(None, title="用户名")
+    phone: Annotated[str, Field(max_length=20)] = Field(title="手机号")
+    code: Annotated[str, Field(max_length=10)] = Field(title="验证码")
+    password: Annotated[str, Field(max_length=128)] = Field(title="密码")
+    user_name: Annotated[str, Field(max_length=20)] | None = Field(None, title="用户名")
 
 
 __all__ = ["CredentialsSchema", "JWTOut", "JWTPayload", "CaptchaRequest", "CodeLoginSchema", "RegisterSchema"]

@@ -52,11 +52,7 @@ def _prompt_fields(models, label: str, candidates_fn) -> dict[str, list[str]]:
 
 def _format_generated_files(results: list[tuple[str, str]]) -> None:
     """对生成/追加的前端文件执行 oxfmt 格式化 + eslint --fix。"""
-    targets = [
-        str(WEB_ROOT / rel_path)
-        for rel_path, status in results
-        if status in ("created", "appended")
-    ]
+    targets = [str(WEB_ROOT / rel_path) for rel_path, status in results if status in ("created", "appended")]
     if not targets:
         return
 

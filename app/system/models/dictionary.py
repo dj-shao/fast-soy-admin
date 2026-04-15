@@ -7,8 +7,8 @@
 
 用法示例::
 
-    # HR 模块的标签分类使用 dict_type="skill_category"
-    # 前端调用 GET /api/v1/system-manage/dictionaries/skill_category/options
+    # HR 模块的标签分类使用 dict_type="tag_category"
+    # 前端调用 GET /api/v1/system-manage/dictionaries/tag_category/options
     # 返回: [{"label": "工作方式", "value": "working_style"}, ...]
 """
 
@@ -21,7 +21,7 @@ class Dictionary(BaseModel, AuditMixin):
     """系统字典项"""
 
     id = fields.IntField(primary_key=True)
-    dict_type = fields.CharField(max_length=100, description="字典类型，如 skill_category / employee_position")
+    dict_type = fields.CharField(max_length=100, description="字典类型，如 tag_category / employee_position")
     label = fields.CharField(max_length=100, description="显示标签")
     value = fields.CharField(max_length=100, description="存储值")
     order = fields.IntField(default=0, description="排序")

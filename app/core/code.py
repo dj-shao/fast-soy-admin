@@ -95,7 +95,7 @@ class Code:
     HR_DEPARTMENT_REQUIRED = "2700"  # 超级管理员创建员工需要指定部门
     HR_MANAGER_REQUIRED = "2701"  # 仅部门主管可创建员工
     HR_CREATE_FORBIDDEN = "2702"  # 无权限创建员工
-    HR_SKILLS_EXCEED_LIMIT = "2703"  # 员工标签数量超出上限
+    HR_TAGS_EXCEED_LIMIT = "2703"  # 员工标签数量超出上限
     HR_EMPLOYEE_NOT_IN_DEPT = "2704"  # 该员工不在当前主管部门中
     HR_USER_NOT_EMPLOYEE = "2705"  # 当前用户未关联员工信息
     HR_MANAGER_ONLY = "2706"  # 仅部门主管可执行此操作

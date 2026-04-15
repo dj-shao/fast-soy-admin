@@ -6,15 +6,58 @@ from pathlib import Path
 
 from app.cli.parser import FieldInfo, ModelInfo, RelationInfo, collect_extra_imports
 
+# Tortoise 整型字段 → 约束类型别名（来自 app.utils.types）
+INT_FIELD_CONSTRAINT: dict[str, str] = {
+    "SmallIntField": "Int16",
+    "IntField": "Int32",
+    "BigIntField": "Int64",
+}
+
+
+def _field_type_hint(f: FieldInfo) -> str:
+    """根据 Tortoise 字段类型返回带约束的 Python 类型注解字符串。
+
+    - SmallIntField / IntField / BigIntField → Int16 / Int32 / Int64
+    - CharField(max_length=N) → Annotated[str, Field(max_length=N)]
+    - CharEnumField / IntEnumField → 枚举类型名（由 parser 填入 python_type）
+    - 其他字段沿用 python_type
+    """
+    if f.enum_type:
+        return f.enum_type
+
+    constrained_int = INT_FIELD_CONSTRAINT.get(f.field_type)
+    if constrained_int:
+        return constrained_int
+
+    if f.field_type == "CharField" and f.python_type == "str" and f.max_length:
+        return f"Annotated[str, Field(max_length={f.max_length})]"
+
+    return f.python_type
+
 
 def _schema_field_line(f: FieldInfo, *, optional: bool = False) -> str:
     """生成单个 schema 字段行。"""
-    py_type = f.python_type
+    type_hint = _field_type_hint(f)
     title = f.description or f.name
 
     if optional or not f.required:
-        return f'{f.name}: {py_type} | None = Field(None, title="{title}")'
-    return f'{f.name}: {py_type} = Field(title="{title}")'
+        return f'{f.name}: {type_hint} | None = Field(None, title="{title}")'
+    return f'{f.name}: {type_hint} = Field(title="{title}")'
+
+
+def _collect_constrained_types(models: list[ModelInfo]) -> tuple[set[str], bool]:
+    """扫描所有字段，返回 (需要从 app.utils 导入的整型别名集合, 是否使用 Annotated)。"""
+    int_types: set[str] = set()
+    needs_annotated = False
+    for model in models:
+        for f in model.schema_fields:
+            if f.enum_type:
+                continue
+            if f.field_type in INT_FIELD_CONSTRAINT:
+                int_types.add(INT_FIELD_CONSTRAINT[f.field_type])
+            elif f.field_type == "CharField" and f.python_type == "str" and f.max_length:
+                needs_annotated = True
+    return int_types, needs_annotated
 
 
 def _fk_schema_field(r: RelationInfo, *, optional: bool = False) -> str:
@@ -33,6 +76,10 @@ def gen_schemas(module_name: str, models: list[ModelInfo]) -> str:
     extra_imports = collect_extra_imports(models)
     import_lines = sorted(extra_imports)
 
+    int_types, needs_annotated = _collect_constrained_types(models)
+    # 收集被引用的 enum 类型
+    enum_types = {f.enum_type for m in models for f in m.schema_fields if f.enum_type}
+
     lines = [
         "# pyright: reportIncompatibleVariableOverride=false",
         '"""',
@@ -40,14 +87,15 @@ def gen_schemas(module_name: str, models: list[ModelInfo]) -> str:
         '"""',
         "",
     ]
+    if needs_annotated:
+        lines.append("from typing import Annotated")
+        lines.append("")
     if import_lines:
         lines.extend(import_lines)
         lines.append("")
-    # 收集被引用的 enum 类型
-    enum_types = {f.enum_type for m in models for f in m.schema_fields if f.enum_type}
-    utils_imports = "PageQueryBase, SchemaBase"
-    if enum_types:
-        utils_imports += ", " + ", ".join(sorted(enum_types))
+
+    utils_symbols = {"PageQueryBase", "SchemaBase"} | enum_types | int_types
+    utils_imports = ", ".join(sorted(utils_symbols))
 
     lines.extend([
         "from pydantic import Field",

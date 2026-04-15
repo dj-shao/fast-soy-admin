@@ -140,14 +140,14 @@ async def auth_client(app, seed_data):
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def hr_data(app, seed_data):
-    """Seed HR test data: department, skills, employee (linked to super admin)."""
-    from app.business.hr.models import Department, Employee, Skill
+    """Seed HR test data: department, tags, employee (linked to super admin)."""
+    from app.business.hr.models import Department, Employee, Tag
 
     user = seed_data
 
     dept = await Department.create(name="Engineering", code="ENG", description="Engineering Department")
-    skill_py = await Skill.create(name="Python", category="Language")
-    skill_js = await Skill.create(name="JavaScript", category="Language")
+    tag_py = await Tag.create(name="Python", category="Language")
+    tag_js = await Tag.create(name="JavaScript", category="Language")
 
     emp = await Employee.create(
         name=user.nick_name or "Soybean",
@@ -156,9 +156,9 @@ async def hr_data(app, seed_data):
         department=dept,
         user_id=user.id,
     )
-    await emp.skills.add(skill_py)
+    await emp.tags.add(tag_py)
 
     # Set employee as department manager
     await Department.filter(id=dept.id).update(manager_id=emp.id)
 
-    return {"department": dept, "skills": [skill_py, skill_js], "employee": emp, "user": user}
+    return {"department": dept, "tags": [tag_py, tag_js], "employee": emp, "user": user}

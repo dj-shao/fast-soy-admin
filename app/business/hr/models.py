@@ -41,20 +41,20 @@ class Department(BaseModel, AuditMixin, TreeMixin, SoftDeleteMixin):
         table = "biz_department"
 
 
-class Skill(BaseModel, AuditMixin):
+class Tag(BaseModel, AuditMixin):
     """标签
 
-    ``category`` 的允许值通过系统字典管理（dict_type="skill_category"），
-    前端可通过 ``GET /api/v1/system-manage/dictionaries/skill_category/options`` 获取。
+    ``category`` 的允许值通过系统字典管理（dict_type="tag_category"），
+    前端可通过 ``GET /api/v1/system-manage/dictionaries/tag_category/options`` 获取。
     """
 
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100, unique=True, description="标签名称")
-    category = fields.CharField(max_length=50, description="标签分类（引用字典 skill_category）")
+    category = fields.CharField(max_length=50, description="标签分类（引用字典 tag_category）")
     description = fields.CharField(max_length=500, null=True, blank=True, description="标签描述")
 
     class Meta:
-        table = "biz_skill"
+        table = "biz_tag"
 
 
 class EmployeeStatus(str, Enum):
@@ -98,7 +98,7 @@ class Employee(BaseModel, AuditMixin, SoftDeleteMixin):
     department_id: int
     department: fields.ForeignKeyRelation[Department] = fields.ForeignKeyField("app_system.Department", related_name="employees", description="所属部门")
     # M2M: 员工 ↔ 标签
-    skills: fields.ManyToManyRelation[Skill] = fields.ManyToManyField("app_system.Skill", related_name="employees", description="标签列表")
+    tags: fields.ManyToManyRelation[Tag] = fields.ManyToManyField("app_system.Tag", related_name="employees", description="标签列表")
 
     class Meta:
         table = "biz_employee"

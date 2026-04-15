@@ -139,13 +139,17 @@ async def lifespan(_app: FastAPI):
         await close_redis(_app.state.redis)
 
 
-app = create_app()
+fastapi_app = create_app()
 
-app.mount("/static", StaticFiles(directory=APP_SETTINGS.STATIC_ROOT), name="static")
+fastapi_app.mount("/static", StaticFiles(directory=APP_SETTINGS.STATIC_ROOT), name="static")
 
 # 反向代理支持 — 使用 granian 提供的 wrapper 从 X-Forwarded-* 还原真实客户端 IP / 协议。
 # 仅在启用且受信任主机白名单配置正确时生效；必须放在路由挂载之后、最外层。
+# 注意：wrapper 返回的是 ASGI 可调用对象，不再具有 FastAPI 属性（如 .routes）。
+# 需要访问 FastAPI 实例的代码请从本模块导入 `fastapi_app`。
 if APP_SETTINGS.PROXY_HEADERS_ENABLED:
     from granian.utils.proxies import wrap_asgi_with_proxy_headers
 
-    app = wrap_asgi_with_proxy_headers(app, trusted_hosts=APP_SETTINGS.TRUSTED_HOSTS)  # type: ignore[assignment]
+    app = wrap_asgi_with_proxy_headers(fastapi_app, trusted_hosts=APP_SETTINGS.TRUSTED_HOSTS)
+else:
+    app = fastapi_app

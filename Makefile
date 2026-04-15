@@ -38,8 +38,8 @@ check: fmt typecheck test ## Run all backend quality gates (format + typecheck +
 # ── Database ─────────────────────────────────────────────────
 
 .PHONY: initdb
-initdb: ## First-time database init (migrations + migrate)
-	uv run python -m app.cli initdb
+initdb: ## First-time database init (migrations + migrate); pass ARGS=--force to re-init
+	uv run python -m app.cli initdb $(ARGS)
 
 .PHONY: makemigrations
 makemigrations: ## Generate migration files from model changes

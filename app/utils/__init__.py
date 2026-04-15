@@ -82,6 +82,11 @@ from app.core.tools import to_camel_case as to_camel_case
 from app.core.tools import to_lower_camel_case as to_lower_camel_case
 from app.core.tools import to_snake_case as to_snake_case
 from app.core.tools import to_upper_camel_case as to_upper_camel_case
+
+# ---- 约束类型别名 ----
+from app.core.types import Int16 as Int16
+from app.core.types import Int32 as Int32
+from app.core.types import Int64 as Int64
 from app.system.radar.developer import radar_log as radar_log
 
 # ---- 安全 ----

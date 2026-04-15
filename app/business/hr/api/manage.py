@@ -63,11 +63,11 @@ emp_crud = CRUDRouter(
 @emp_crud.override("get")
 async def _get_employee(item_id: int):
     emp = await employee_controller.get(id=item_id)
-    await emp.fetch_related("department", "skills")
+    await emp.fetch_related("department", "tags")
     record = await emp.to_dict()
     record["departmentName"] = emp.department.name
-    record["tagIds"] = [s.id for s in emp.skills]
-    record["tagNames"] = [s.name for s in emp.skills]
+    record["tagIds"] = [t.id for t in emp.tags]
+    record["tagNames"] = [t.name for t in emp.tags]
     # 保持与列表接口一致的 status 映射
     from app.business.hr.services import _EMPLOYEE_STATUS_TO_ENABLE
 

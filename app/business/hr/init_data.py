@@ -8,7 +8,7 @@ HR 模块初始化数据 — 菜单、角色、标签与演示员工。
 from __future__ import annotations
 
 from app.business.hr.config import BIZ_SETTINGS
-from app.business.hr.models import Department, Employee, Skill
+from app.business.hr.models import Department, Employee, Tag
 from app.system.services import ensure_menu, ensure_role, ensure_user, reconcile_menu_subtree
 from app.system.services.init_helper import _safe_update_or_create
 
@@ -66,14 +66,14 @@ HR_ROLE_SEEDS = [
 ]
 
 HR_TAG_SEEDS = [
-    {"name": "远程协作", "category": "工作方式", "description": "适应远程与混合办公节奏"},
-    {"name": "文档驱动", "category": "协作习惯", "description": "习惯通过文档沉淀流程与信息"},
-    {"name": "会议纪要", "category": "协作习惯", "description": "擅长整理会议纪要与行动项"},
-    {"name": "跨部门协作", "category": "协作习惯", "description": "能高效连接上下游团队推进事项"},
-    {"name": "新人导师", "category": "团队角色", "description": "愿意承担新人带教与融入支持"},
-    {"name": "活动组织", "category": "团队角色", "description": "擅长组织团队活动和内部沟通"},
-    {"name": "客户沟通", "category": "业务方向", "description": "适合承担客户跟进与需求沟通"},
-    {"name": "流程优化", "category": "成长方向", "description": "关注流程梳理与效率提升"},
+    {"name": "远程协作", "category": "working_style", "description": "适应远程与混合办公节奏"},
+    {"name": "文档驱动", "category": "collaboration", "description": "习惯通过文档沉淀流程与信息"},
+    {"name": "会议纪要", "category": "collaboration", "description": "擅长整理会议纪要与行动项"},
+    {"name": "跨部门协作", "category": "collaboration", "description": "能高效连接上下游团队推进事项"},
+    {"name": "新人导师", "category": "team_role", "description": "愿意承担新人带教与融入支持"},
+    {"name": "活动组织", "category": "team_role", "description": "擅长组织团队活动和内部沟通"},
+    {"name": "客户沟通", "category": "business", "description": "适合承担客户跟进与需求沟通"},
+    {"name": "流程优化", "category": "growth", "description": "关注流程梳理与效率提升"},
 ]
 
 HR_DEPARTMENT_SEEDS = [
@@ -235,7 +235,7 @@ async def _init_departments() -> None:
 async def _init_tags() -> None:
     for tag_seed in HR_TAG_SEEDS:
         await _safe_update_or_create(
-            Skill,
+            Tag,
             {"name": tag_seed["name"]},
             {
                 "category": tag_seed["category"],
@@ -264,10 +264,10 @@ async def _ensure_demo_employee(seed: dict) -> Employee:
         },
     )
 
-    await employee.skills.clear()
+    await employee.tags.clear()
     for tag_name in employee_seed["tag_names"]:
-        tag = await Skill.get(name=tag_name)
-        await employee.skills.add(tag)
+        tag = await Tag.get(name=tag_name)
+        await employee.tags.add(tag)
 
     return employee
 

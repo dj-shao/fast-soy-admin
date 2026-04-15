@@ -413,12 +413,12 @@ async def _ensure_super_role() -> None:
 
 
 DICTIONARY_SEEDS = [
-    # skill_category — HR 标签分类
-    {"dict_type": "skill_category", "label": "工作方式", "value": "working_style", "order": 1},
-    {"dict_type": "skill_category", "label": "协作习惯", "value": "collaboration", "order": 2},
-    {"dict_type": "skill_category", "label": "团队角色", "value": "team_role", "order": 3},
-    {"dict_type": "skill_category", "label": "业务方向", "value": "business", "order": 4},
-    {"dict_type": "skill_category", "label": "成长方向", "value": "growth", "order": 5},
+    # tag_category — HR 标签分类
+    {"dict_type": "tag_category", "label": "工作方式", "value": "working_style", "order": 1},
+    {"dict_type": "tag_category", "label": "协作习惯", "value": "collaboration", "order": 2},
+    {"dict_type": "tag_category", "label": "团队角色", "value": "team_role", "order": 3},
+    {"dict_type": "tag_category", "label": "业务方向", "value": "business", "order": 4},
+    {"dict_type": "tag_category", "label": "成长方向", "value": "growth", "order": 5},
     # employee_position — HR 员工职位
     {"dict_type": "employee_position", "label": "技术主管", "value": "tech_lead", "order": 1},
     {"dict_type": "employee_position", "label": "前端工程师", "value": "frontend_engineer", "order": 2},

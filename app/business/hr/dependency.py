@@ -6,8 +6,8 @@ Usage:
     async def my_profile(emp: Employee = DependEmployee):
         ...
 
-    @router.patch("/department/employees/{id}/skills")
-    async def edit_skills(emp: Employee = DependManager):
+    @router.patch("/department/employees/{id}/tags")
+    async def edit_tags(emp: Employee = DependManager):
         ...
 """
 

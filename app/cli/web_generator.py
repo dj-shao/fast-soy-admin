@@ -259,14 +259,14 @@ def _form_item_block(
         placeholder_key = f"{i18n_page}.form.{snake_to_camel(f.name)}"  # type: ignore[attr-defined]
         return [
             f'      <NFormItem :label="$t(\'{label_key}\')" path="{name_camel}">',
-            '        <NSelect',
+            "        <NSelect",
             f'          v-model:value="model.{name_camel}"',
             '          :options="[]"',  # TODO
-            '          clearable',
-            f'          :placeholder="$t(\'{placeholder_key}\')"',
-            '        />',
-            f'        <!-- TODO: 配置 {name_camel} 的 options 数据源 -->',
-            '      </NFormItem>',
+            "          clearable",
+            f"          :placeholder=\"$t('{placeholder_key}')\"",
+            "        />",
+            f"        <!-- TODO: 配置 {name_camel} 的 options 数据源 -->",
+            "      </NFormItem>",
         ]
 
     assert isinstance(f, FieldInfo)
@@ -296,22 +296,22 @@ def _form_item_block(
         body = [f'        <NTimePicker v-model:value="model.{name_camel}" clearable class="w-full" />']
     elif component == "select-status":
         body = [
-            '        <NSelect',
+            "        <NSelect",
             f'          v-model:value="model.{name_camel}"',
             '          :options="statusTypeOptions"',
-            '          clearable',
-            f'          :placeholder="$t(\'{placeholder_key}\')"',
-            '        />',
+            "          clearable",
+            f"          :placeholder=\"$t('{placeholder_key}')\"",
+            "        />",
         ]
     elif component == "select-todo":
         body = [
-            '        <NSelect',
+            "        <NSelect",
             f'          v-model:value="model.{name_camel}"',
             '          :options="[]"',
-            '          clearable',
-            f'          :placeholder="$t(\'{placeholder_key}\')"',
-            '        />',
-            f'        <!-- TODO: 配置 {name_camel} 的 options 数据源 -->',
+            "          clearable",
+            f"          :placeholder=\"$t('{placeholder_key}')\"",
+            "        />",
+            f"        <!-- TODO: 配置 {name_camel} 的 options 数据源 -->",
         ]
     else:
         body = [f'        <NInput v-model:value="model.{name_camel}" :placeholder="$t(\'{placeholder_key}\')" />']
@@ -514,10 +514,7 @@ def gen_view_search(module: str, model: ModelInfo, search_field_names: list[str]
         form_items.extend([item_start, body, item_end])
 
     # 是否引入 statusTypeOptions
-    needs_status_import = any(
-        (next((x for x in fields if x.name == n), None) or FieldInfo("", "", "")).enum_type == "StatusType"
-        for n in search_field_names
-    )
+    needs_status_import = any((next((x for x in fields if x.name == n), None) or FieldInfo("", "", "")).enum_type == "StatusType" for n in search_field_names)
 
     imports = [
         "import { toRaw } from 'vue';",
@@ -664,12 +661,12 @@ const model = ref(createDefaultModel());
 
 function createDefaultModel(): Api.{ns}.{entity}AddParams {{
   return {{
-{(',' + chr(10)).join(default_entries)}
+{("," + chr(10)).join(default_entries)}
   }} as Api.{ns}.{entity}AddParams;
 }}
 
 const rules: Record<string, App.Global.FormRule> = {{
-{(',' + chr(10)).join(required_rules)}
+{("," + chr(10)).join(required_rules)}
 }};
 
 function handleInitModel() {{

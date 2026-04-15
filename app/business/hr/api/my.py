@@ -13,7 +13,7 @@ from app.business.hr.schemas import TagIds
 
 if TYPE_CHECKING:
     from app.business.hr.models import Employee
-from app.business.hr.services import get_employee_profile, list_department_employees, update_employee_skills
+from app.business.hr.services import get_employee_profile, list_department_employees, update_employee_tags
 from app.utils import DependAuth, Success
 
 router = APIRouter(prefix="/hr", tags=["HR个人"], dependencies=[DependAuth])
@@ -29,7 +29,7 @@ async def my_profile(emp: Employee = DependEmployee):
 @router.patch("/my/tags", summary="编辑我的标签")
 async def my_tags(body: TagIds, emp: Employee = DependEmployee):
     """编辑自己的标签列表"""
-    return await update_employee_skills(emp, body.tag_ids, log_label="编辑个人标签")
+    return await update_employee_tags(emp, body.tag_ids, log_label="编辑个人标签")
 
 
 @router.get("/my/department", summary="同部门同事")
