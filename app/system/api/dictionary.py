@@ -6,6 +6,8 @@ from fastapi import Request
 
 from app.core.base_schema import Success
 from app.core.router import CRUDRouter, SearchFieldConfig
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 from app.system.controllers.dictionary import dictionary_controller
 from app.system.models.dictionary import Dictionary
 from app.system.schemas.dictionary import DictionaryCreate, DictionarySearch, DictionaryUpdate
@@ -66,22 +68,22 @@ async def invalidate_dict_cache(redis, dict_type: str | None = None) -> None:
 async def _create_dict(obj_in: DictionaryCreate, request: Request):
     new_obj = await dictionary_controller.create(obj_in=obj_in)
     await invalidate_dict_cache(request.app.state.redis, obj_in.dict_type)
-    return Success(msg="创建成功", data={"createdId": new_obj.id})
+    return Success(msg="创建成功", data={"createdId": encode_id(new_obj.id)})
 
 
 @crud.override("update")
-async def _update_dict(item_id: int, obj_in: DictionaryUpdate, request: Request):
+async def _update_dict(item_id: SqidPath, obj_in: DictionaryUpdate, request: Request):
     old_obj = await dictionary_controller.get(id=item_id)
     await dictionary_controller.update(id=item_id, obj_in=obj_in)
     await invalidate_dict_cache(request.app.state.redis, old_obj.dict_type)
     if obj_in.dict_type and obj_in.dict_type != old_obj.dict_type:
         await invalidate_dict_cache(request.app.state.redis, obj_in.dict_type)
-    return Success(msg="更新成功", data={"updatedId": item_id})
+    return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
 
 @crud.override("delete")
-async def _delete_dict(item_id: int, request: Request):
+async def _delete_dict(item_id: SqidPath, request: Request):
     obj = await dictionary_controller.get(id=item_id)
     await dictionary_controller.remove(id=item_id)
     await invalidate_dict_cache(request.app.state.redis, obj.dict_type)
-    return Success(msg="删除成功", data={"deletedId": item_id})
+    return Success(msg="删除成功", data={"deletedId": encode_id(item_id)})

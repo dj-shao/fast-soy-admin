@@ -1,6 +1,8 @@
 from app.core.base_schema import Fail, Success, SuccessExtra
 from app.core.code import Code
 from app.core.router import CRUDRouter, SearchFieldConfig
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 from app.system.controllers import menu_controller
 from app.system.models import IconType, Menu
 from app.system.schemas.admin import MenuCreate, MenuSearch, MenuUpdate
@@ -80,15 +82,15 @@ async def _create_menu(menu_in: MenuCreate):
         new_menu = await menu_controller.create(obj_in=menu_in, exclude={"buttons"})
     if new_menu and menu_in.by_menu_buttons:
         await menu_controller.update_buttons_by_code(new_menu, menu_in.by_menu_buttons)
-    return Success(msg="创建成功", data={"createdId": new_menu.id})
+    return Success(msg="创建成功", data={"createdId": encode_id(new_menu.id)})
 
 
 @crud.override("update")
-async def _update_menu(item_id: int, obj_in: MenuUpdate):
+async def _update_menu(item_id: SqidPath, obj_in: MenuUpdate):
     menu_obj = await menu_controller.update(id=item_id, obj_in=obj_in, exclude={"buttons"})
     if menu_obj and obj_in.by_menu_buttons:
         await menu_controller.update_buttons_by_code(menu_obj, obj_in.by_menu_buttons)
-    return Success(msg="更新成功", data={"updatedId": item_id})
+    return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
 
 # ---- 扩展：菜单树（简化）/ 页面列表 / 按钮树 ----

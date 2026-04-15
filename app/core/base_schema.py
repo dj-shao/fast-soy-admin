@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.tools import to_camel_case
+from app.core.types import SqidId
 
 T = TypeVar("T")
 
@@ -77,7 +78,7 @@ class SuccessExtra(Custom):
 
 
 class CommonIds(SchemaBase):
-    ids: list[int] = Field(min_length=1, title="通用ids")
+    ids: list[SqidId] = Field(min_length=1, title="通用ids")
 
 
 class OfflineByRoleRequest(SchemaBase):

@@ -23,6 +23,7 @@ from app.utils import (
     CRUDRouter,
     DependPermission,
     SearchFieldConfig,
+    SqidPath,
     Success,
     SuccessExtra,
     require_buttons,
@@ -61,7 +62,7 @@ emp_crud = CRUDRouter(
 
 
 @emp_crud.override("get")
-async def _get_employee(item_id: int):
+async def _get_employee(item_id: SqidPath):
     emp = await employee_controller.get(id=item_id)
     await emp.fetch_related("department", "tags")
     record = await emp.to_dict()
@@ -118,11 +119,11 @@ async def create_emp(emp_in: EmployeeCreate, request: Request):
 
 
 @router.patch("/employees/{emp_id}", summary="更新员工")
-async def update_emp(emp_id: int, emp_in: EmployeeUpdate):
+async def update_emp(emp_id: SqidPath, emp_in: EmployeeUpdate):
     return await update_employee(emp_id, emp_in)
 
 
 @router.post("/employees/{emp_id}/transition", summary="员工状态流转")
-async def transition_emp(emp_id: int, body: EmployeeTransition):
+async def transition_emp(emp_id: SqidPath, body: EmployeeTransition):
     """状态流转: pending → onboarding → active → resigned"""
     return await transition_employee(emp_id, body.to_state)

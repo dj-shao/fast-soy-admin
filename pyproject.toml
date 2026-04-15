@@ -19,6 +19,7 @@ dependencies = [
   "pydantic>=2.12.5",
   "pydantic-settings>=2.13.1",
   "pyjwt>=2.12.1",
+  "sqids>=0.5.0",
   "starlette==0.52.1",
   "tortoise-orm>=1.1.7",
   "granian>=2.3.0",

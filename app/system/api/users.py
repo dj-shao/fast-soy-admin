@@ -6,6 +6,8 @@ from app.core.base_schema import CommonIds, Fail, OfflineByRoleRequest, Success,
 from app.core.code import Code
 from app.core.crud import get_db_conn
 from app.core.router import CRUDRouter, SearchFieldConfig
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 from app.system.controllers import user_controller
 from app.system.models import User
 from app.system.schemas.users import UserCreate, UserSearch, UserUpdate
@@ -71,14 +73,14 @@ async def _create_user(user_in: UserCreate):
         new_user = await user_controller.create(obj_in=user_in)
         await user_controller.update_roles_by_code(new_user, user_in.by_user_role_code_list)
 
-    return Success(msg="创建成功", data={"createdId": new_user.id})
+    return Success(msg="创建成功", data={"createdId": encode_id(new_user.id)})
 
 
 # ---- 覆盖 update：密码变更需失效 session ----
 
 
 @crud.override("update")
-async def _update_user(item_id: int, obj_in: UserUpdate, request: Request):
+async def _update_user(item_id: SqidPath, obj_in: UserUpdate, request: Request):
     assert obj_in.by_user_role_code_list is not None
 
     async with in_transaction(get_db_conn(User)):
@@ -88,14 +90,14 @@ async def _update_user(item_id: int, obj_in: UserUpdate, request: Request):
     if obj_in.password:
         await invalidate_user_session(request.app.state.redis, item_id)
 
-    return Success(msg="更新成功", data={"updatedId": item_id})
+    return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
 
 # ---- 扩展：下线接口 ----
 
 
 @router.post("/users/{user_id}/offline", summary="用户下线")
-async def _(user_id: int, request: Request):
+async def _(user_id: SqidPath, request: Request):
     """强制单个用户下线"""
     await invalidate_user_session(request.app.state.redis, user_id)
     return Success(msg="操作成功")

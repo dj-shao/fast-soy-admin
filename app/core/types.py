@@ -13,14 +13,34 @@
         stock: Int32 = Field(title="库存")
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field, PlainSerializer
 
-__all__ = ["Int16", "Int32", "Int64"]
+from app.core.sqids import decode_id, encode_id
+
+__all__ = ["Int16", "Int32", "Int64", "SqidId", "SqidPath"]
 
 # 有符号整型范围（与 Tortoise SmallIntField / IntField / BigIntField 对齐，
 # 同时也匹配 PostgreSQL smallint / int / bigint 与 MySQL SMALLINT / INT / BIGINT）。
 Int16 = Annotated[int, Field(ge=-32_768, le=32_767)]
 Int32 = Annotated[int, Field(ge=-2_147_483_648, le=2_147_483_647)]
 Int64 = Annotated[int, Field(ge=-9_223_372_036_854_775_808, le=9_223_372_036_854_775_807)]
+
+
+def _sqid_to_int(v: Any) -> int:
+    # 接受 int / 纯数字串 / sqid 三种形式：
+    # - 迁移期内仍允许前端/旧测试发送数字 id，避免一次性 break。
+    # - 迁移完成后可在此收紧为仅接受 sqid。
+    if isinstance(v, int):
+        return v
+    s = str(v)
+    if s.lstrip("-").isdigit():
+        return int(s)
+    return decode_id(s)
+
+
+# 请求/响应两端均走 sqid 字符串；校验时把 sqid 解成 int，序列化时再编回 sqid。
+SqidId = Annotated[int, BeforeValidator(_sqid_to_int), PlainSerializer(encode_id, return_type=str)]
+# 仅用于 FastAPI 路径参数（``{item_id}``），只需解码 sqid → int，不参与序列化输出。
+SqidPath = Annotated[int, BeforeValidator(_sqid_to_int)]

@@ -4,6 +4,8 @@ from app.core.base_schema import CommonIds, Success, SuccessExtra
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_ROLE_CODES
 from app.core.router import CRUDRouter, SearchFieldConfig
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 from app.system.api.utils import generate_tags_recursive_list, refresh_api_list
 from app.system.controllers import api_controller
 from app.system.models import Api, Role
@@ -75,27 +77,27 @@ async def _create_api(api_in: ApiCreate):
         api_in.tags = api_in.tags.split("|")
     new_api = await api_controller.create(obj_in=api_in)
     radar_log("创建API", data={"apiId": new_api.id, "apiPath": api_in.api_path, "summary": api_in.summary})
-    return Success(msg="创建成功", data={"createdId": new_api.id})
+    return Success(msg="创建成功", data={"createdId": encode_id(new_api.id)})
 
 
 @crud.override("update")
-async def _update_api(item_id: int, obj_in: ApiUpdate):
+async def _update_api(item_id: SqidPath, obj_in: ApiUpdate):
     if isinstance(obj_in.tags, str):
         obj_in.tags = obj_in.tags.split("|")
     await api_controller.update(id=item_id, obj_in=obj_in)
     radar_log("编辑API", data={"apiId": item_id, "apiPath": obj_in.api_path, "summary": obj_in.summary})
-    return Success(msg="更新成功", data={"updatedId": item_id})
+    return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
 
 # ---- 覆盖 delete / batch_delete：审计日志 ----
 
 
 @crud.override("delete")
-async def _delete_api(item_id: int):
+async def _delete_api(item_id: SqidPath):
     api_obj = await api_controller.get(id=item_id)
     radar_log("删除API", data={"apiId": item_id, "apiPath": api_obj.api_path, "summary": api_obj.summary})
     await api_controller.remove(id=item_id)
-    return Success(msg="删除成功", data={"deletedId": item_id})
+    return Success(msg="删除成功", data={"deletedId": encode_id(item_id)})
 
 
 @crud.override("batch_delete")

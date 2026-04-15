@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from app.core.base_schema import CommonIds, Success, SuccessExtra
 from app.core.crud import CRUDBase
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 
 
 @dataclass
@@ -203,10 +205,10 @@ class CRUDRouter:
         spec = dict(self._route_specs[name])
         signatures = {
             "list": f"async def list_items(obj_in: {self.list_schema.__name__})" if self.list_schema else "async def list_items()",
-            "get": "async def get_item(item_id: int)",
+            "get": "async def get_item(item_id: SqidPath)",
             "create": f"async def create_item(obj_in: {self.create_schema.__name__})" if self.create_schema else "async def create_item()",
-            "update": f"async def update_item(item_id: int, obj_in: {self.update_schema.__name__})" if self.update_schema else "async def update_item(item_id: int)",
-            "delete": "async def delete_item(item_id: int)",
+            "update": f"async def update_item(item_id: SqidPath, obj_in: {self.update_schema.__name__})" if self.update_schema else "async def update_item(item_id: SqidPath)",
+            "delete": "async def delete_item(item_id: SqidPath)",
             "batch_delete": "async def batch_delete(obj_in: CommonIds)",
         }
         spec["signature"] = signatures.get(name, "")
@@ -296,7 +298,7 @@ class CRUDRouter:
         controller = self.controller
         to_record = self._to_record
 
-        async def get_item(item_id: int):
+        async def get_item(item_id: SqidPath):
             obj = await controller.get(id=item_id)
             return Success(data=await to_record(obj))
 
@@ -317,7 +319,7 @@ class CRUDRouter:
 
         async def create_item(obj_in: schema):  # type: ignore[valid-type]
             new_obj = await controller.create(obj_in=obj_in)
-            return Success(msg="创建成功", data={"createdId": new_obj.id})
+            return Success(msg="创建成功", data={"createdId": encode_id(new_obj.id)})
 
         self._register_spec(
             "create",
@@ -334,9 +336,9 @@ class CRUDRouter:
         controller = self.controller
         schema = self.update_schema
 
-        async def update_item(item_id: int, obj_in: schema):  # type: ignore[valid-type]
+        async def update_item(item_id: SqidPath, obj_in: schema):  # type: ignore[valid-type]
             await controller.update(id=item_id, obj_in=obj_in)
-            return Success(msg="更新成功", data={"updatedId": item_id})
+            return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
         self._register_spec(
             "update",
@@ -350,12 +352,12 @@ class CRUDRouter:
         controller = self.controller
         use_soft = self.soft_delete
 
-        async def delete_item(item_id: int):
+        async def delete_item(item_id: SqidPath):
             if use_soft:
                 await controller.soft_remove(id=item_id)
             else:
                 await controller.remove(id=item_id)
-            return Success(msg="删除成功", data={"deletedId": item_id})
+            return Success(msg="删除成功", data={"deletedId": encode_id(item_id)})
 
         self._register_spec(
             "delete",
@@ -374,7 +376,7 @@ class CRUDRouter:
                 deleted_count = await controller.soft_batch_remove(obj_in.ids)
             else:
                 deleted_count = await controller.batch_remove(obj_in.ids)
-            return Success(msg="删除成功", data={"deletedCount": deleted_count, "deletedIds": obj_in.ids})
+            return Success(msg="删除成功", data={"deletedCount": deleted_count, "deletedIds": [encode_id(i) for i in obj_in.ids]})
 
         self._register_spec(
             "batch_delete",

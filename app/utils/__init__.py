@@ -69,6 +69,10 @@ from app.core.router import CRUDRouter as CRUDRouter
 from app.core.router import SearchFieldConfig as SearchFieldConfig
 from app.core.soft_delete import SoftDeleteMixin as SoftDeleteMixin
 
+# ---- Sqids 编解码 ----
+from app.core.sqids import decode_id as decode_id
+from app.core.sqids import encode_id as encode_id
+
 # ---- 状态机 ----
 from app.core.state_machine import StateMachine as StateMachine
 
@@ -87,6 +91,8 @@ from app.core.tools import to_upper_camel_case as to_upper_camel_case
 from app.core.types import Int16 as Int16
 from app.core.types import Int32 as Int32
 from app.core.types import Int64 as Int64
+from app.core.types import SqidId as SqidId
+from app.core.types import SqidPath as SqidPath
 from app.system.radar.developer import radar_log as radar_log
 
 # ---- 安全 ----

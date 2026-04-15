@@ -7,6 +7,8 @@ from app.core.code import Code
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.crud import get_db_conn
 from app.core.router import CRUDRouter, SearchFieldConfig
+from app.core.sqids import encode_id
+from app.core.types import SqidPath
 from app.system.controllers import menu_controller, role_controller
 from app.system.models import Api, Button, Role
 from app.system.schemas.admin import RoleCreate, RoleSearch, RoleUpdate, RoleUpdateAuthrization
@@ -38,24 +40,24 @@ async def _create_role(role_in: RoleCreate, request: Request):
 
     new_role = await role_controller.create(obj_in=role_in)
     await load_role_permissions(request.app.state.redis, role_code=new_role.role_code)
-    return Success(msg="创建成功", data={"createdId": new_role.id})
+    return Success(msg="创建成功", data={"createdId": encode_id(new_role.id)})
 
 
 # ---- 覆盖 update：同上 ----
 
 
 @crud.override("update")
-async def _update_role(item_id: int, obj_in: RoleUpdate, request: Request):
+async def _update_role(item_id: SqidPath, obj_in: RoleUpdate, request: Request):
     role_obj = await role_controller.update(id=item_id, obj_in=obj_in)
     await load_role_permissions(request.app.state.redis, role_code=role_obj.role_code)
-    return Success(msg="更新成功", data={"updatedId": item_id})
+    return Success(msg="更新成功", data={"updatedId": encode_id(item_id)})
 
 
 # ---- 扩展：角色菜单管理 ----
 
 
 @router.get("/roles/{role_id}/menus", summary="查看角色菜单")
-async def _(role_id: int):
+async def _(role_id: SqidPath):
     role_obj = await Role.get(id=role_id).prefetch_related("by_role_home")
     if role_obj.role_code == SUPER_ADMIN_ROLE:
         menu_objs = await menu_controller.model.filter(constant=False)
@@ -65,7 +67,7 @@ async def _(role_id: int):
 
 
 @router.patch("/roles/{role_id}/menus", summary="更新角色菜单")
-async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
+async def _(role_id: SqidPath, role_in: RoleUpdateAuthrization, request: Request):
     role_obj = await role_controller.get(id=role_id)
     if role_in.by_role_home_id:
         async with in_transaction(get_db_conn(Role)):
@@ -96,7 +98,7 @@ async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
 
 
 @router.get("/roles/{role_id}/buttons", summary="查看角色按钮")
-async def _(role_id: int):
+async def _(role_id: SqidPath):
     role_obj = await role_controller.get(id=role_id)
     if role_obj.role_code == SUPER_ADMIN_ROLE:
         button_objs = await Button.all()
@@ -107,7 +109,7 @@ async def _(role_id: int):
 
 
 @router.patch("/roles/{role_id}/buttons", summary="更新角色按钮")
-async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
+async def _(role_id: SqidPath, role_in: RoleUpdateAuthrization, request: Request):
     role_obj = await role_controller.get(id=role_id)
     if role_in.by_role_button_ids is not None:
         async with in_transaction(get_db_conn(Role)):
@@ -124,7 +126,7 @@ async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
 
 
 @router.get("/roles/{role_id}/apis", summary="查看角色API")
-async def _(role_id: int):
+async def _(role_id: SqidPath):
     role_obj = await role_controller.get(id=role_id)
     if role_obj.role_code == SUPER_ADMIN_ROLE:
         api_objs = await Api.all()
@@ -135,7 +137,7 @@ async def _(role_id: int):
 
 
 @router.patch("/roles/{role_id}/apis", summary="更新角色API")
-async def _(role_id: int, role_in: RoleUpdateAuthrization, request: Request):
+async def _(role_id: SqidPath, role_in: RoleUpdateAuthrization, request: Request):
     role_obj = await role_controller.get(id=role_id)
     if role_in.by_role_api_ids is not None:
         async with in_transaction(get_db_conn(Role)):

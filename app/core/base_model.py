@@ -7,6 +7,7 @@ from uuid import UUID
 from tortoise import fields, models
 
 from app.core.config import APP_SETTINGS
+from app.core.sqids import encode_id
 from app.core.tools import to_lower_camel_case
 
 
@@ -44,6 +45,9 @@ class BaseModel(models.Model):
                     value = float(value)
                 elif isinstance(value, Enum):
                     value = value.value
+                # 主键 + 外键统一编码为 sqid；value=0 保留作为根/空引用语义（如 TreeMixin.parent_id）
+                if isinstance(value, int) and value != 0 and (field == "id" or field.endswith("_id")):
+                    value = encode_id(value)
                 d[to_lower_camel_case(field)] = value
 
         if m2m:

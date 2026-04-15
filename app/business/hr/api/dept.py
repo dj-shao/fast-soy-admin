@@ -14,7 +14,7 @@ from app.business.hr.schemas import TagIds
 if TYPE_CHECKING:
     from app.business.hr.models import Employee
 from app.business.hr.services import edit_subordinate_tags, list_department_employees
-from app.utils import Success
+from app.utils import SqidPath, Success
 
 router = APIRouter(prefix="/hr", tags=["HR主管"])
 
@@ -27,6 +27,6 @@ async def dept_employees(mgr: Employee = DependManager):
 
 
 @router.patch("/department/employees/{emp_id}/tags", summary="[主管] 编辑下属标签")
-async def edit_employee_tags(emp_id: int, body: TagIds, mgr: Employee = DependManager):
+async def edit_employee_tags(emp_id: SqidPath, body: TagIds, mgr: Employee = DependManager):
     """主管编辑同部门下属的标签"""
     return await edit_subordinate_tags(mgr, emp_id, body.tag_ids)
