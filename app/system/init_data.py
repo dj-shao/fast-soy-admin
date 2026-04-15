@@ -1,4 +1,5 @@
 from app.core.constants import SUPER_ADMIN_ROLE
+from app.core.data_scope import DataScopeType
 from app.system.models import Button, Menu, Role
 from app.system.models.dictionary import Dictionary
 from app.system.services import ensure_menu, ensure_role, ensure_user
@@ -9,6 +10,7 @@ SYSTEM_ROLE_SEEDS = [
         "role_name": "管理员",
         "role_code": "R_ADMIN",
         "role_desc": "管理员",
+        "data_scope": DataScopeType.all,
         "menus": ["home", "about", "manage", "manage_user", "manage_user-detail"],
         "buttons": ["B_CODE2", "B_CODE3"],
         "apis": [
@@ -22,6 +24,7 @@ SYSTEM_ROLE_SEEDS = [
         "role_name": "普通用户",
         "role_code": "R_USER",
         "role_desc": "普通用户",
+        "data_scope": DataScopeType.self_,
         "menus": ["home", "about"],
     },
 ]

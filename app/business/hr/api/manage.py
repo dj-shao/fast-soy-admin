@@ -39,6 +39,12 @@ dept_crud = CRUDRouter(
     summary_prefix="部门",
     soft_delete=True,
     tree_endpoint=True,
+    action_dependencies={
+        "create": [require_buttons("B_HR_DEPT_CREATE")],
+        "update": [require_buttons("B_HR_DEPT_EDIT")],
+        "delete": [require_buttons("B_HR_DEPT_DELETE")],
+        "batch_delete": [require_buttons("B_HR_DEPT_DELETE")],
+    },
 )
 
 tag_crud = CRUDRouter(
@@ -49,15 +55,26 @@ tag_crud = CRUDRouter(
     list_schema=TagSearch,
     search_fields=SearchFieldConfig(contains_fields=["name"], exact_fields=["category"]),
     summary_prefix="标签",
+    action_dependencies={
+        "create": [require_buttons("B_HR_TAG_CREATE")],
+        "update": [require_buttons("B_HR_TAG_EDIT")],
+        "delete": [require_buttons("B_HR_TAG_DELETE")],
+        "batch_delete": [require_buttons("B_HR_TAG_DELETE")],
+    },
 )
 
-# 员工的列表/创建/更新均走自定义逻辑
+# 员工的列表/创建/更新均走自定义逻辑（见下方 router 上的手写路由），
+# CRUDRouter 仅生成 GET/DELETE 与 batch_delete；create/update 因未传 schema 不注册。
 emp_crud = CRUDRouter(
     prefix="/employees",
     controller=employee_controller,
     list_schema=EmployeeSearch,
     summary_prefix="员工",
     soft_delete=True,
+    action_dependencies={
+        "delete": [require_buttons("B_HR_EMP_DELETE")],
+        "batch_delete": [require_buttons("B_HR_EMP_DELETE")],
+    },
 )
 
 
@@ -69,12 +86,6 @@ async def _get_employee(item_id: SqidPath):
     record["departmentName"] = emp.department.name
     record["tagIds"] = [t.id for t in emp.tags]
     record["tagNames"] = [t.name for t in emp.tags]
-    # 保持与列表接口一致的 status 映射
-    from app.business.hr.services import _EMPLOYEE_STATUS_TO_ENABLE
-
-    raw_status = record.get("status", "")
-    record["employeeStatus"] = raw_status
-    record["status"] = _EMPLOYEE_STATUS_TO_ENABLE.get(raw_status, "2")
     return Success(data=record)
 
 
@@ -100,30 +111,38 @@ router.include_router(tag_crud.router)
 router.include_router(emp_crud.router)
 
 
-# ---- 员工创建/更新：独立走 service 层，依赖 B_HR_CREATE 按钮权限 ----
+# ---- 员工创建/更新/状态流转：独立走 service 层，按按钮权限隔离 ----
 
 
 @router.post(
     "/employees",
     summary="创建员工",
-    dependencies=[require_buttons("B_HR_CREATE")],
+    dependencies=[require_buttons("B_HR_EMP_CREATE")],
 )
 async def create_emp(emp_in: EmployeeCreate, request: Request):
     """
     超级管理员：须指定 department_id
-    部门主管（B_HR_CREATE）：department 自动继承
+    部门主管（B_HR_EMP_CREATE）：department 自动继承
     共同逻辑：自动创建系统用户（R_USER，must_change_password=True），密码随机生成并返回给前端
     """
     current_emp = await employee_controller.get_or_none(user_id=CTX_USER_ID.get())
     return await create_employee(emp_in, current_emp, request.app.state.redis)
 
 
-@router.patch("/employees/{emp_id}", summary="更新员工")
+@router.patch(
+    "/employees/{emp_id}",
+    summary="更新员工",
+    dependencies=[require_buttons("B_HR_EMP_EDIT")],
+)
 async def update_emp(emp_id: SqidPath, emp_in: EmployeeUpdate):
     return await update_employee(emp_id, emp_in)
 
 
-@router.post("/employees/{emp_id}/transition", summary="员工状态流转")
+@router.post(
+    "/employees/{emp_id}/transition",
+    summary="员工状态流转",
+    dependencies=[require_buttons("B_HR_EMP_TRANSITION")],
+)
 async def transition_emp(emp_id: SqidPath, body: EmployeeTransition):
     """状态流转: pending → onboarding → active → resigned"""
     return await transition_employee(emp_id, body.to_state)

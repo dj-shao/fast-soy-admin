@@ -44,10 +44,12 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
     - 部门主管(B_HR_CREATE): department 自动继承
     """
     # 1. 权限 & 部门
-    if is_super_admin():
+    # - 超级管理员 / HR 管理员（持 B_HR_EMP_CREATE 但未绑定员工）：必须显式指定 department_id
+    # - 部门主管（持 B_HR_EMP_CREATE 且绑定的员工是某部门主管）：自动继承本部门
+    if is_super_admin() or (has_button_code("B_HR_EMP_CREATE") and not current_emp):
         if not emp_in.department_id:
-            return Fail(code=Code.HR_DEPARTMENT_REQUIRED, msg="超级管理员创建员工需要指定部门")
-    elif has_button_code("B_HR_CREATE") and current_emp:
+            return Fail(code=Code.HR_DEPARTMENT_REQUIRED, msg="创建员工需要指定部门")
+    elif has_button_code("B_HR_EMP_CREATE") and current_emp:
         dept = await Department.filter(manager_id=current_emp.id).first()
         if not dept:
             return Fail(code=Code.HR_MANAGER_REQUIRED, msg="仅部门主管可创建员工")
@@ -101,14 +103,6 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
     )
 
 
-_EMPLOYEE_STATUS_TO_ENABLE: dict[str, str] = {
-    "active": "1",
-    "pending": "2",
-    "onboarding": "2",
-    "resigned": "2",
-}
-
-
 async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
     """员工分页列表 — 使用 select_related/prefetch_related 优化 N+1 查询 + 行级数据权限。"""
     q = employee_controller.build_search(search_in, contains_fields=["name", "email"], exact_fields=["status"], range_fields=["created_at"])
@@ -133,11 +127,6 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
         record["departmentName"] = emp.department.name
         record["tagIds"] = [t.id for t in emp.tags]
         record["tagNames"] = [t.name for t in emp.tags]
-        # 前端 statusTypeRecord 期望 EnableStatus ('1'/'2')，
-        # 将 EmployeeStatus 映射为兼容值，原始状态保留在 employeeStatus
-        raw_status = record.get("status", "")
-        record["employeeStatus"] = raw_status
-        record["status"] = _EMPLOYEE_STATUS_TO_ENABLE.get(raw_status, "2")
         records.append(record)
     return total, records
 

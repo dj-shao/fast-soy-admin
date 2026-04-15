@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from app.business.hr.config import BIZ_SETTINGS
 from app.business.hr.models import Department, Employee, Tag
+from app.core.data_scope import DataScopeType
 from app.system.services import ensure_menu, ensure_role, ensure_user, reconcile_menu_subtree
 from app.system.services.init_helper import _safe_update_or_create
 
@@ -20,6 +21,11 @@ HR_MENU_CHILDREN = [
         "component": "view.hr_department",
         "icon": "mdi:office-building",
         "order": 1,
+        "buttons": [
+            {"button_code": "B_HR_DEPT_CREATE", "button_desc": "创建部门"},
+            {"button_code": "B_HR_DEPT_EDIT", "button_desc": "编辑部门"},
+            {"button_code": "B_HR_DEPT_DELETE", "button_desc": "删除部门"},
+        ],
     },
     {
         "menu_name": "员工管理",
@@ -29,9 +35,10 @@ HR_MENU_CHILDREN = [
         "icon": "mdi:account",
         "order": 2,
         "buttons": [
-            {"button_code": "B_HR_CREATE", "button_desc": "创建员工"},
-            {"button_code": "B_HR_EDIT", "button_desc": "编辑员工"},
-            {"button_code": "B_HR_DELETE", "button_desc": "删除员工"},
+            {"button_code": "B_HR_EMP_CREATE", "button_desc": "创建员工"},
+            {"button_code": "B_HR_EMP_EDIT", "button_desc": "编辑员工"},
+            {"button_code": "B_HR_EMP_DELETE", "button_desc": "删除员工"},
+            {"button_code": "B_HR_EMP_TRANSITION", "button_desc": "员工状态流转"},
         ],
     },
     {
@@ -41,28 +48,80 @@ HR_MENU_CHILDREN = [
         "component": "view.hr_tag",
         "icon": "mdi:tag-multiple",
         "order": 3,
+        "buttons": [
+            {"button_code": "B_HR_TAG_CREATE", "button_desc": "创建标签"},
+            {"button_code": "B_HR_TAG_EDIT", "button_desc": "编辑标签"},
+            {"button_code": "B_HR_TAG_DELETE", "button_desc": "删除标签"},
+        ],
     },
 ]
 
 HR_ROLE_SEEDS = [
     {
+        "role_name": "HR管理员",
+        "role_code": "R_HR_ADMIN",
+        "role_desc": "HR 总管，掌管部门、员工、标签的全量维护",
+        "data_scope": DataScopeType.all,
+        "menus": ["home", "hr", "hr_department", "hr_employee", "hr_tag"],
+        "buttons": [
+            "B_HR_DEPT_CREATE",
+            "B_HR_DEPT_EDIT",
+            "B_HR_DEPT_DELETE",
+            "B_HR_EMP_CREATE",
+            "B_HR_EMP_EDIT",
+            "B_HR_EMP_DELETE",
+            "B_HR_EMP_TRANSITION",
+            "B_HR_TAG_CREATE",
+            "B_HR_TAG_EDIT",
+            "B_HR_TAG_DELETE",
+        ],
+        "apis": [
+            # 部门
+            ("post", "/api/v1/business/hr/departments/search"),
+            ("get", "/api/v1/business/hr/departments/{item_id}"),
+            ("post", "/api/v1/business/hr/departments"),
+            ("patch", "/api/v1/business/hr/departments/{item_id}"),
+            ("delete", "/api/v1/business/hr/departments/{item_id}"),
+            ("delete", "/api/v1/business/hr/departments"),
+            ("get", "/api/v1/business/hr/departments/tree"),
+            ("get", "/api/v1/business/hr/departments/stats"),
+            # 员工
+            ("post", "/api/v1/business/hr/employees/search"),
+            ("get", "/api/v1/business/hr/employees/{item_id}"),
+            ("post", "/api/v1/business/hr/employees"),
+            ("patch", "/api/v1/business/hr/employees/{emp_id}"),
+            ("delete", "/api/v1/business/hr/employees/{item_id}"),
+            ("delete", "/api/v1/business/hr/employees"),
+            ("post", "/api/v1/business/hr/employees/{emp_id}/transition"),
+            # 标签
+            ("post", "/api/v1/business/hr/tags/search"),
+            ("get", "/api/v1/business/hr/tags/{item_id}"),
+            ("post", "/api/v1/business/hr/tags"),
+            ("patch", "/api/v1/business/hr/tags/{item_id}"),
+            ("delete", "/api/v1/business/hr/tags/{item_id}"),
+            ("delete", "/api/v1/business/hr/tags"),
+        ],
+    },
+    {
         "role_name": "部门主管",
         "role_code": "R_DEPT_MGR",
         "role_desc": "部门主管，可管理本部门员工",
+        "data_scope": DataScopeType.department,
         "menus": ["home", "hr", "hr_department", "hr_employee", "hr_tag"],
-        "buttons": ["B_HR_CREATE", "B_HR_EDIT"],
+        "buttons": ["B_HR_EMP_CREATE", "B_HR_EMP_EDIT", "B_HR_EMP_TRANSITION"],
         "apis": [
             ("post", "/api/v1/business/hr/employees"),
             ("post", "/api/v1/business/hr/employees/search"),
             ("patch", "/api/v1/business/hr/employees/{emp_id}"),
             ("get", "/api/v1/business/hr/employees/{item_id}"),
+            ("post", "/api/v1/business/hr/employees/{emp_id}/transition"),
             ("get", "/api/v1/business/hr/department/employees"),
             ("post", "/api/v1/business/hr/departments/search"),
             ("patch", "/api/v1/business/hr/department/employees/{emp_id}/tags"),
             ("get", "/api/v1/business/hr/departments/stats"),
             ("post", "/api/v1/business/hr/tags/search"),
         ],
-    }
+    },
 ]
 
 HR_TAG_SEEDS = [
@@ -79,7 +138,9 @@ HR_TAG_SEEDS = [
 HR_DEPARTMENT_SEEDS = [
     {"name": "技术部", "code": "TECH", "description": "负责平台研发与技术支持", "manager_employee_no": 9001},
     {"name": "市场部", "code": "MKT", "description": "负责市场活动与品牌传播", "manager_employee_no": 9003},
-    {"name": "行政部", "code": "OPS", "description": "负责行政支持与办公协同", "manager_employee_no": None},
+    {"name": "行政部", "code": "OPS", "description": "负责行政支持与办公协同", "manager_employee_no": 9005},
+    {"name": "人事部", "code": "PERSONNEL", "description": "负责招聘、员工关系与组织发展", "manager_employee_no": 9006},
+    {"name": "财务部", "code": "FINANCE", "description": "负责公司财务管理与资金运营", "manager_employee_no": 9008},
 ]
 
 HR_EMPLOYEE_SEEDS = [
@@ -159,7 +220,7 @@ HR_EMPLOYEE_SEEDS = [
         "user": {
             "user_name": "songyu",
             "password": "123456",
-            "role_codes": ["R_USER"],
+            "role_codes": ["R_DEPT_MGR"],
             "user_email": "songyu@example.com",
             "nick_name": "宋羽",
         },
@@ -168,9 +229,81 @@ HR_EMPLOYEE_SEEDS = [
             "name": "宋羽",
             "email": "songyu@example.com",
             "phone": "13800000005",
-            "position": "行政专员",
+            "position": "行政主管",
             "department_code": "OPS",
             "tag_names": ["远程协作", "文档驱动", "会议纪要"],
+        },
+    },
+    {
+        "user": {
+            "user_name": "hanmei",
+            "password": "123456",
+            "role_codes": ["R_HR_ADMIN", "R_DEPT_MGR"],
+            "user_email": "hanmei@example.com",
+            "nick_name": "韩梅",
+        },
+        "employee": {
+            "employee_no_serial": 9006,
+            "name": "韩梅",
+            "email": "hanmei@example.com",
+            "phone": "13800000006",
+            "position": "人事主管",
+            "department_code": "PERSONNEL",
+            "tag_names": ["跨部门协作", "新人导师", "流程优化"],
+        },
+    },
+    {
+        "user": {
+            "user_name": "liuqing",
+            "password": "123456",
+            "role_codes": ["R_HR_ADMIN"],
+            "user_email": "liuqing@example.com",
+            "nick_name": "柳青",
+        },
+        "employee": {
+            "employee_no_serial": 9007,
+            "name": "柳青",
+            "email": "liuqing@example.com",
+            "phone": "13800000007",
+            "position": "人事专员",
+            "department_code": "PERSONNEL",
+            "tag_names": ["会议纪要", "客户沟通", "新人导师"],
+        },
+    },
+    {
+        "user": {
+            "user_name": "qinfeng",
+            "password": "123456",
+            "role_codes": ["R_DEPT_MGR"],
+            "user_email": "qinfeng@example.com",
+            "nick_name": "秦风",
+        },
+        "employee": {
+            "employee_no_serial": 9008,
+            "name": "秦风",
+            "email": "qinfeng@example.com",
+            "phone": "13800000008",
+            "position": "财务主管",
+            "department_code": "FINANCE",
+            "tag_names": ["文档驱动", "流程优化", "跨部门协作"],
+        },
+    },
+    {
+        "user": {
+            "user_name": "suwan",
+            "password": "123456",
+            "role_codes": ["R_USER"],
+            "user_email": "suwan@example.com",
+            "nick_name": "苏婉",
+        },
+        "employee": {
+            "employee_no_serial": 9009,
+            "name": "苏婉",
+            "email": "suwan@example.com",
+            "phone": "13800000009",
+            "position": "财务专员",
+            "department_code": "FINANCE",
+            "tag_names": ["会议纪要", "文档驱动"],
         },
     },
 ]

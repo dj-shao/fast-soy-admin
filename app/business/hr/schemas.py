@@ -7,6 +7,7 @@ from datetime import datetime
 
 from pydantic import Field
 
+from app.business.hr.models import EmployeeStatus
 from app.utils import PageQueryBase, SchemaBase, StatusType
 
 # ============================================================
@@ -73,7 +74,7 @@ class EmployeeBase(SchemaBase):
     email: str | None = Field(None, title="邮箱")
     phone: str | None = Field(None, title="电话")
     position: str | None = Field(None, title="职位")
-    status: StatusType | None = Field(None, title="状态")
+    status: EmployeeStatus | None = Field(None, title="员工状态")
 
 
 class EmployeeCreate(EmployeeBase):

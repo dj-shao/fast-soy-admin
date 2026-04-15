@@ -15,6 +15,7 @@ from typing import Any, TypeVar
 from tortoise.models import Model
 
 from app.core.base_model import GenderType, IconType, MenuType
+from app.core.data_scope import DataScopeType
 from app.core.exceptions import IntegrityError
 from app.core.log import log
 from app.system.controllers.user import user_controller
@@ -142,6 +143,7 @@ async def ensure_role(
     role_code: str,
     role_desc: str = "",
     home_route: str = "home",
+    data_scope: DataScopeType | None = None,
     menus: list[str] | None = None,
     buttons: list[str] | None = None,
     apis: list[tuple[str, str]] | None = None,
@@ -152,19 +154,24 @@ async def ensure_role(
     关系同步语义：None=不修改，[]=清空，[...]=替换为声明的集合。
 
     Args:
+        data_scope: 行级数据范围（``all`` / ``department`` / ``self`` / ``custom``）。
+            None 时不写入该字段，沿用 Role 模型默认值（``all``）。
         menus: route_name 列表
         buttons: button_code 列表
         apis: [(method, path), ...] 列表
     """
     home_menu = await Menu.filter(route_name=home_route).first()
+    defaults: dict[str, Any] = {
+        "role_name": role_name,
+        "role_desc": role_desc,
+        "by_role_home_id": home_menu.id if home_menu else 1,
+    }
+    if data_scope is not None:
+        defaults["data_scope"] = data_scope
     role, created = await _safe_update_or_create(
         Role,
         {"role_code": role_code},
-        {
-            "role_name": role_name,
-            "role_desc": role_desc,
-            "by_role_home_id": home_menu.id if home_menu else 1,
-        },
+        defaults,
     )
 
     if menus is not None:

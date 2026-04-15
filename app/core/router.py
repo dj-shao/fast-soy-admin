@@ -1,5 +1,6 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
@@ -112,6 +113,7 @@ class CRUDRouter:
         record_transform: Callable | None = None,
         soft_delete: bool = False,
         tree_endpoint: bool = False,
+        action_dependencies: dict[str, Sequence[Any]] | None = None,
     ):
         """
         Args:
@@ -133,6 +135,16 @@ class CRUDRouter:
                 而非物理删除。需要模型使用 ``SoftDeleteMixin``。
             tree_endpoint: 为 True 时自动生成 ``GET /{resource}/tree`` 树形接口。
                 需要模型使用 ``TreeMixin``（包含 ``parent_id`` 字段）。
+            action_dependencies: 为指定标准路由附加 FastAPI 依赖（典型用途：
+                ``require_buttons``）。键为路由名（``list`` / ``get`` / ``create``
+                / ``update`` / ``delete`` / ``batch_delete``），值为依赖列表。
+                对 ``override`` 替换的路由同样生效。例::
+
+                    action_dependencies={
+                        "create": [require_buttons("B_X_CREATE")],
+                        "delete": [require_buttons("B_X_DELETE")],
+                        "batch_delete": [require_buttons("B_X_DELETE")],
+                    }
         """
         self.prefix = prefix
         self.controller = controller
@@ -146,6 +158,7 @@ class CRUDRouter:
         self.record_transform = record_transform
         self.soft_delete = soft_delete
         self.tree_endpoint = tree_endpoint
+        self.action_dependencies: dict[str, Sequence[Any]] = action_dependencies or {}
 
         # 资源名（从 prefix 提取，如 "/roles" → "roles"）
         self._resource = prefix.strip("/").split("/")[-1]
@@ -243,6 +256,7 @@ class CRUDRouter:
                 func,
                 methods=list(spec["methods"]),
                 summary=spec["summary"],
+                dependencies=list(self.action_dependencies.get(name, [])) or None,
             )
             return func
 
@@ -255,7 +269,13 @@ class CRUDRouter:
     def _register_spec(self, name: str, path: str, methods: set[str], summary: str, endpoint: Callable) -> None:
         """登记路由规格并将其挂载到 router 上。"""
         self._route_specs[name] = {"path": path, "methods": methods, "summary": summary}
-        self.router.add_api_route(path, endpoint, methods=list(methods), summary=summary)
+        self.router.add_api_route(
+            path,
+            endpoint,
+            methods=list(methods),
+            summary=summary,
+            dependencies=list(self.action_dependencies.get(name, [])) or None,
+        )
 
     # ---- 标准路由实现 ----
 
