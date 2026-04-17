@@ -89,6 +89,7 @@ class Employee(BaseModel, AuditMixin, SoftDeleteMixin):
     email = fields.CharField(max_length=100, null=True, blank=True, description="邮箱")
     phone = fields.CharField(max_length=20, null=True, blank=True, description="电话")
     position = fields.CharField(max_length=50, null=True, blank=True, description="职位（引用字典 employee_position）")
+    avatar = fields.CharField(max_length=500, null=True, blank=True, description="员工头像URL")
     status = fields.CharEnumField(enum_type=EmployeeStatus, default=EmployeeStatus.pending, description="员工状态")
 
     # FK: 员工 → 系统用户 (一对一)

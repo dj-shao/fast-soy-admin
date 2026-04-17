@@ -42,22 +42,16 @@ async def _list_apis(obj_in: ApiSearch):
         exact_fields=["summary", "status_type"],
     )
     if obj_in.tags:
-        for tag in obj_in.tags:
-            q &= Q(tags__contains=[tag])
-
-    # 排除系统自动注册的 API，只显示用户手动创建的
-    q &= Q(is_system=False)
+        q &= Q(*[Q(tags__icontains=f"|{tag}|") for tag in obj_in.tags], join_type="OR")
 
     role_codes = CTX_ROLE_CODES.get()
     if SUPER_ADMIN_ROLE in role_codes:
         total, api_objs = await api_controller.list(page=obj_in.current, page_size=obj_in.size, search=q, order=["tags", "id"])
     else:
-        # 非超管：只返回角色关联的 API
         role_objs = await Role.filter(role_code__in=role_codes).prefetch_related("by_role_apis")
         all_apis: list[Api] = []
         for role_obj in role_objs:
             all_apis.extend([api_obj for api_obj in await role_obj.by_role_apis.filter(q)])
-
         unique_apis = sorted(set(all_apis), key=lambda x: x.id)
         start = ((obj_in.current or 1) - 1) * (obj_in.size or 10)
         end = start + (obj_in.size or 10)

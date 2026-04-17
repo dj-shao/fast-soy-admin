@@ -3,6 +3,7 @@ from tortoise import fields
 
 from app.core.base_model import AuditMixin, BaseModel, GenderType, IconType, MenuType, MethodType, StatusType
 from app.core.data_scope import DataScopeType
+from app.core.fields import DelimitedListField
 
 
 class User(BaseModel, AuditMixin):
@@ -63,7 +64,7 @@ class Api(BaseModel, AuditMixin):
     api_path = fields.CharField(max_length=500, description="API路径")
     api_method = fields.CharEnumField(MethodType, description="请求方法")
     summary = fields.CharField(max_length=500, null=True, description="请求简介")
-    tags = fields.JSONField(max_length=500, null=True, description="API标签")
+    tags = DelimitedListField(max_length=500, null=True, description="API标签")
     status_type = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
     is_system = fields.BooleanField(default=False, description="是否为系统自动注册的API")
 

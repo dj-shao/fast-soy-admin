@@ -23,6 +23,7 @@ dependencies = [
   "starlette==0.52.1",
   "tortoise-orm>=1.1.7",
   "granian>=2.3.0",
+  "python-multipart>=0.0.26",
 ]
 
 [dependency-groups]

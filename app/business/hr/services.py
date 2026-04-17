@@ -14,6 +14,7 @@ from app.business.hr.schemas import EmployeeCreate, EmployeeSearch, EmployeeUpda
 from app.core.code import Code
 from app.core.data_scope import build_scope_filter, get_current_data_scope
 from app.core.events import emit
+from app.core.sqids import encode_id
 from app.core.state_machine import StateMachine
 from app.system.services import create_system_user
 from app.utils import CTX_USER_ID, Fail, Success, get_current_user_id, get_db_conn, has_button_code, is_super_admin, radar_log
@@ -125,7 +126,7 @@ async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
     for emp in employees:
         record = await emp.to_dict()
         record["departmentName"] = emp.department.name
-        record["tagIds"] = [t.id for t in emp.tags]
+        record["tagIds"] = [encode_id(t.id) for t in emp.tags]
         record["tagNames"] = [t.name for t in emp.tags]
         records.append(record)
     return total, records

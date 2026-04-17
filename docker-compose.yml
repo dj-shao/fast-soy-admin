@@ -9,6 +9,8 @@ services:
       app:
         condition: service_healthy
     restart: always
+    volumes:
+      - static_data:/app/static
     networks:
       - internal
 
@@ -19,6 +21,8 @@ services:
     depends_on:
       - redis
     restart: always
+    volumes:
+      - static_data:/opt/fast-soy-admin/static
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9999/health')"]
       interval: 30s
@@ -52,6 +56,7 @@ services:
 
 volumes:
   redis_data:
+  static_data:
 
 networks:
   internal:

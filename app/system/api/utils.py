@@ -51,14 +51,20 @@ async def generate_tags_recursive_list():
             for tag in tags:
                 existing_tag = next((item for item in current_level if item["value"] == tag), None)
                 if not existing_tag:
-                    new_tag: dict = {"value": tag, "label": tag}
+                    new_tag: dict = {"value": tag, "label": tag, "children": []}
                     current_level.append(new_tag)
-                    new_tag["children"] = []
                     current_level = new_tag["children"]
                 else:
-                    if existing_tag.get("children") is None:
-                        existing_tag["children"] = []
-                    current_level = existing_tag["children"]
+                    current_level = existing_tag.setdefault("children", [])
         return tree
 
-    return build_tree()
+    def prune_empty_children(nodes: list[dict]):
+        for node in nodes:
+            children = node.get("children")
+            if children:
+                prune_empty_children(children)
+            else:
+                node.pop("children", None)
+        return nodes
+
+    return prune_empty_children(build_tree())
