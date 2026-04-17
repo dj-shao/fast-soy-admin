@@ -40,7 +40,8 @@ def _sqid_to_int(v: Any) -> int:
     return decode_id(s)
 
 
-# 请求/响应两端均走 sqid 字符串；校验时把 sqid 解成 int，序列化时再编回 sqid。
-SqidId = Annotated[int, BeforeValidator(_sqid_to_int), PlainSerializer(encode_id, return_type=str)]
+# 请求/响应两端均走 sqid 字符串；校验时把 sqid 解成 int，JSON 序列化时再编回 sqid。
+# 仅在 JSON 模式序列化时编码，Python 模式（model_dump()）保留 int，避免在传给 ORM 时把 FK 变成字符串。
+SqidId = Annotated[int, BeforeValidator(_sqid_to_int), PlainSerializer(encode_id, return_type=str, when_used="json")]
 # 仅用于 FastAPI 路径参数（``{item_id}``），只需解码 sqid → int，不参与序列化输出。
 SqidPath = Annotated[int, BeforeValidator(_sqid_to_int)]

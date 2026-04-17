@@ -1,114 +1,153 @@
 # FastSoyAdmin
 
-> Full-stack admin template: FastAPI (Python) + Vue3 (TypeScript), with RBAC, Redis caching, Docker deployment.
+> Full-stack admin template: FastAPI (Python) + Vue3 (TypeScript). Layered backend with auto-discovered business modules, CLI-driven CRUD code generation, three-level RBAC (menu / button / API) plus row-level data scope, Redis-backed permission cache, multi-worker startup lock, and Docker Compose deployment.
 
 - Source: https://github.com/sleep1223/fast-soy-admin
 - Preview: https://fast-soy-admin.sleep0.de/
 - Docs: https://sleep1223.github.io/fast-soy-admin-docs/
-- API Docs: https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b
+- API Reference (Apifox): https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b
 - License: MIT
-- Upstream: https://github.com/soybeanjs/soybean-admin (frontend)
+- Frontend upstream: https://github.com/soybeanjs/soybean-admin
 
 ## Documentation
 
-Full docs: [llms-full.md](llms-full.md)
+Consolidated context file: [llms-full.md](llms-full.md)
 
-### Guide (Frontend)
-- [Introduction](fastsoy-admin-docs/src/guide/intro.md): Project overview, tech stack, architecture
-- [Quick Start](fastsoy-admin-docs/src/guide/quick-start.md): Environment setup, Docker and local development
-- [Router Introduction](fastsoy-admin-docs/src/guide/router/intro.md): Elegant Router, RouteMeta
-- [Route Structure](fastsoy-admin-docs/src/guide/router/structure.md): Single, secondary, multi-level, parameter routes
-- [Route Creation](fastsoy-admin-docs/src/guide/router/create.md): How to create new routes
-- [Dynamic Route](fastsoy-admin-docs/src/guide/router/dynamic.md): Static vs dynamic route modes, RBAC
-- [Route Cache](fastsoy-admin-docs/src/guide/router/cache.md): keep-alive caching
-- [Route Component](fastsoy-admin-docs/src/guide/router/component.md): Layout, view, mixed components
-- [Router Push](fastsoy-admin-docs/src/guide/router/push.md): useRouterPush hook
-- [Router Guard](fastsoy-admin-docs/src/guide/router/guard.md): Auth flow, guards
-- [Request Introduction](fastsoy-admin-docs/src/guide/request/intro.md): Environment config, request functions
-- [Request Usage](fastsoy-admin-docs/src/guide/request/usage.md): API definitions, fetchXxx pattern
-- [Proxy](fastsoy-admin-docs/src/guide/request/proxy.md): Dev and production proxy
-- [Connect Backend](fastsoy-admin-docs/src/guide/request/backend.md): Token handling, error codes
-- [Theme Introduction](fastsoy-admin-docs/src/guide/theme/intro.md): Theme system overview
-- [Theme Config](fastsoy-admin-docs/src/guide/theme/config.md): Theme settings
-- [UnoCSS Theme](fastsoy-admin-docs/src/guide/theme/unocss.md): Atomic CSS integration
-- [Icon Introduction](fastsoy-admin-docs/src/guide/icon/intro.md): Iconify + local SVG
-- [Icon Usage](fastsoy-admin-docs/src/guide/icon/usage.md): Static, dynamic, render function
-- [useTable](fastsoy-admin-docs/src/guide/hooks/use-table.md): Table data management hook
+### Guide
+- [Introduction](https://sleep1223.github.io/fast-soy-admin-docs/guide/intro): Project overview, features, monorepo layout
+- [Quick Start](https://sleep1223.github.io/fast-soy-admin-docs/guide/quick-start): Prerequisites, Docker and local dev via `make`
 
 ### Backend
-- [Introduction](fastsoy-admin-docs/src/backend/intro.md): Tech stack, directory structure, startup flow
-- [Architecture](fastsoy-admin-docs/src/backend/architecture.md): Layered architecture, RBAC model, middleware
-- [Models](fastsoy-admin-docs/src/backend/models.md): User, Role, Menu, Api, Button ORM models
-- [API Routes](fastsoy-admin-docs/src/backend/api.md): Auth, system-manage, route endpoints
-- [Auth & RBAC](fastsoy-admin-docs/src/backend/auth.md): JWT, AuthControl, PermissionControl
-- [CRUD Base](fastsoy-admin-docs/src/backend/crud.md): Generic CRUD, controllers, response wrappers
-- [Response Codes](fastsoy-admin-docs/src/backend/codes.md): 0000-9999 code definitions
-- [Configuration](fastsoy-admin-docs/src/backend/config.md): .env settings, code quality config
-- [Deployment](fastsoy-admin-docs/src/backend/deployment.md): Docker Compose, manual deploy, Nginx
+- [Introduction](https://sleep1223.github.io/fast-soy-admin-docs/backend/intro): Tech stack, top-level layout, startup flow
+- [Architecture](https://sleep1223.github.io/fast-soy-admin-docs/backend/architecture): Middleware, request lifecycle, RBAC, multi-worker, cache model
+- [Development Guide](https://sleep1223.github.io/fast-soy-admin-docs/backend/development): End-to-end CLI flow for a new business module
+- [Commands](https://sleep1223.github.io/fast-soy-admin-docs/backend/commands): Makefile reference (`make cli-init/gen/gen-web`, dev, check)
+- [API Conventions](https://sleep1223.github.io/fast-soy-admin-docs/backend/api): URL rules, response format, pagination, sqid IDs
+- [Response Codes](https://sleep1223.github.io/fast-soy-admin-docs/backend/codes): 0000/1xxx/2xxx code segments, frontend mapping
+- [Auth & Permissions](https://sleep1223.github.io/fast-soy-admin-docs/backend/auth): JWT, DependAuth / DependPermission, require_buttons / require_roles
+- [RBAC](https://sleep1223.github.io/fast-soy-admin-docs/backend/rbac): User ↔ Role ↔ Menu/Button/Api
+- [Data Scope](https://sleep1223.github.io/fast-soy-admin-docs/backend/data-scope): Row-level access control (all/department/self/custom)
+- [Cache](https://sleep1223.github.io/fast-soy-admin-docs/backend/cache): Redis key layout, invalidation
+- [Startup Init & Reconciliation](https://sleep1223.github.io/fast-soy-admin-docs/backend/init-data): ensure_menu / ensure_role / reconcile_menu_subtree
+- [Concurrency](https://sleep1223.github.io/fast-soy-admin-docs/backend/concurrency): Transactions, optimistic/pessimistic/distributed locks
+- [Database](https://sleep1223.github.io/fast-soy-admin-docs/backend/database): DB_URL config, business-module independent DB
+- [Deployment](https://sleep1223.github.io/fast-soy-admin-docs/backend/deployment): Docker Compose, manual deploy, Nginx
+- [Configuration](https://sleep1223.github.io/fast-soy-admin-docs/backend/config): `.env` settings
+- [Models](https://sleep1223.github.io/fast-soy-admin-docs/backend/models): User/Role/Menu/Api/Button/Dictionary
+- [Model Mixins](https://sleep1223.github.io/fast-soy-admin-docs/backend/mixins): BaseModel/AuditMixin/TreeMixin/SoftDeleteMixin
+- [Schemas](https://sleep1223.github.io/fast-soy-admin-docs/backend/schema): SchemaBase, PageQueryBase, Success/Fail/SuccessExtra, make_optional
+- [CRUDBase](https://sleep1223.github.io/fast-soy-admin-docs/backend/crud): Generic single-resource CRUD + build_search
+- [CRUDRouter](https://sleep1223.github.io/fast-soy-admin-docs/backend/crud-router): 6-route factory, `@override`, `action_dependencies`
+- [app.utils](https://sleep1223.github.io/fast-soy-admin-docs/backend/utils): Re-export surface for business modules
+- [Radar Monitoring](https://sleep1223.github.io/fast-soy-admin-docs/backend/radar): Requests / SQL / exceptions / audit dashboard
+- [Autodiscover](https://sleep1223.github.io/fast-soy-admin-docs/backend/core/autodiscover): How `app/business/*` is loaded
+- [Event Bus](https://sleep1223.github.io/fast-soy-admin-docs/backend/core/events): `emit` / `on` for cross-module decoupling
+- [Sqids IDs](https://sleep1223.github.io/fast-soy-admin-docs/backend/core/sqids): `SqidId` / `SqidPath`, encode/decode
+- [State Machine](https://sleep1223.github.io/fast-soy-admin-docs/backend/core/state-machine): Transition validation
+- [HR Reference Module](https://sleep1223.github.io/fast-soy-admin-docs/backend/business/hr): End-to-end business module example
+
+### Frontend
+- [Introduction](https://sleep1223.github.io/fast-soy-admin-docs/frontend/intro): Vue3 + Vite + NaiveUI + Pinia + Alova stack
+- [Router Introduction](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/intro): Elegant Router, RouteMeta
+- [Route Structure](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/structure): Single / nested / multi-level / param routes
+- [Route Creation](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/create): File-system route generation
+- [Dynamic Routes](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/dynamic): Backend-driven menu/route delivery
+- [Route Guards](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/guard): Auth flow, `beforeEach`, `afterEach`
+- [Route Cache](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/cache): `keep-alive`, `defineOptions({ name })`
+- [Route Component](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/component): layout.base / layout.blank / view.xxx
+- [Router Push](https://sleep1223.github.io/fast-soy-admin-docs/frontend/router/push): `useRouterPush`
+- [Request Introduction](https://sleep1223.github.io/fast-soy-admin-docs/frontend/request/intro): Alova factory, env config
+- [Request Usage](https://sleep1223.github.io/fast-soy-admin-docs/frontend/request/usage): `fetchXxx` API pattern
+- [Proxy](https://sleep1223.github.io/fast-soy-admin-docs/frontend/request/proxy): Dev Vite proxy, prod Nginx proxy
+- [Connect Backend](https://sleep1223.github.io/fast-soy-admin-docs/frontend/request/backend): Token handling, code → behavior mapping
+- [Theme Introduction](https://sleep1223.github.io/fast-soy-admin-docs/frontend/theme/intro): Theme system overview
+- [Theme Config](https://sleep1223.github.io/fast-soy-admin-docs/frontend/theme/config): `src/theme/settings.ts`
+- [UnoCSS Theme](https://sleep1223.github.io/fast-soy-admin-docs/frontend/theme/unocss): Atomic CSS integration
+- [Icon Introduction](https://sleep1223.github.io/fast-soy-admin-docs/frontend/icon/intro): Iconify + local SVG
+- [Icon Usage](https://sleep1223.github.io/fast-soy-admin-docs/frontend/icon/usage): Compile-time, runtime, render-function
+- [useNaivePaginatedTable](https://sleep1223.github.io/fast-soy-admin-docs/frontend/hooks/use-table): Table data hook
 
 ### Standards
-- [Overview](fastsoy-admin-docs/src/standard/index.md): Code standards overview
-- [Naming](fastsoy-admin-docs/src/standard/naming.md): Frontend and backend naming conventions
-- [Vue Style](fastsoy-admin-docs/src/standard/vue.md): SFC script order, template rules
-- [Backend Style](fastsoy-admin-docs/src/standard/backend.md): Python code style, Ruff, basedpyright
+- [Overview](https://sleep1223.github.io/fast-soy-admin-docs/standard/): Code standards index
+- [Naming](https://sleep1223.github.io/fast-soy-admin-docs/standard/naming): Files, identifiers, URLs, role/button codes, cache keys, events
+- [Vue Style](https://sleep1223.github.io/fast-soy-admin-docs/standard/vue): SFC rules
+- [Backend Style](https://sleep1223.github.io/fast-soy-admin-docs/standard/backend): PR-review checklist for Python code
 
 ### Other
-- [FAQ](fastsoy-admin-docs/src/faq/index.md): Common issues and solutions
+- [FAQ](https://sleep1223.github.io/fast-soy-admin-docs/faq/): Common issues
 
 ## Tech Stack
 
-Backend: Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x, Redis, Argon2, JWT (HS256)
-Frontend: Vue 3.5, Vite 7, TypeScript 5, Naive UI, Pinia, UnoCSS, Alova, Elegant Router, vue-i18n
-DevOps: Docker Compose (Nginx + FastAPI + Redis), uv, pnpm monorepo, Ruff, basedpyright, ESLint, oxlint
+Backend: Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x (vendored at `/tortoise-orm/`), Redis (fastapi-cache2), Argon2, PyJWT (HS256), Sqids, Granian, fastapi-guard, built-in Radar dashboard, Ruff, basedpyright, uv.
+Frontend: Vue 3.5, Vite 7, TypeScript 5.9, Naive UI, Pinia 3, UnoCSS, Alova, Elegant Router, vue-i18n, ECharts 6, ESLint + oxlint, vue-tsc, pnpm workspaces.
+DevOps: Docker Compose (Nginx :1880 + FastAPI :9999 + Redis), `Makefile` as single entrypoint for every command.
 
 ## Architecture
 
-Monorepo: backend at root (/app), frontend in /web (pnpm workspaces).
+Monorepo: backend at root (`/app`), frontend under `/web` (pnpm workspaces).
 
-Backend layered: Router -> Controller -> CRUD/Model
-Frontend layered: Views -> Service/Store -> API Client
+Backend layers: `api/` → `services/` → `controllers/` (CRUDBase) → `models` + `schemas`. Systems modules in `app/system/`, business modules in `app/business/<name>/` are auto-discovered at startup. `app.system` never imports `app.business`; business modules import via `app.utils` and must not import sibling business modules (use the event bus).
 
-RBAC: Users <-> Roles <-> (Menus, APIs, Buttons), all many-to-many.
-Super admin role R_SUPER bypasses permission checks.
-Standard response: {"code": "0000", "msg": "OK", "data": {...}}
-JWT auth: access token (12h) + refresh token (7d), HS256.
+RBAC: `User ↔ Role ↔ {Menu, Button, Api}`. `R_SUPER` bypasses all checks. API permissions are automatically reconciled against FastAPI routes on startup (`refresh_api_list()`); menus/buttons declared per-module via `ensure_menu()` with optional `reconcile_menu_subtree()` for IaC subtrees. Roles are upserted via `ensure_role()`. Row-level `data_scope` (`all / department / self / custom`) is applied via `build_scope_filter`.
+
+Response contract: `{"code": "0000", "msg": "OK", "data": {...}}`, HTTP status always 200. Resource IDs are sqid strings, not auto-increment ints. Fields are camelCase across the HTTP boundary (automatic via `SchemaBase`). JWT: access 12h, refresh 7d, HS256, versioned via `token_version:{uid}` in Redis.
+
+Frontend: Views → Pinia stores → Alova service → HTTP. Dynamic routes are fetched after login from `/api/v1/route/user-routes`; constant routes from `/api/v1/route/constant-routes`. Elegant Router auto-generates routes from `views/` file structure (route name `module_page`). Auto token refresh on code `2103`, auto logout on `2100/2101`, modal logout on `2102`.
 
 ## Quick Start
 
 ### Docker (recommended)
+```
 git clone https://github.com/sleep1223/fast-soy-admin && cd fast-soy-admin
-docker compose up -d
-# Nginx :1880, FastAPI :9999, Redis :6379
+make up           # nginx :1880, fastapi :9999, redis :6379
+```
 
-### Local Development
-# Backend
-uv sync && uv run python run.py        # port 9999
+### Local development
+```
+make install-all  # backend (uv sync) + frontend (pnpm install)
+make initdb       # first-time database bootstrap
+make dev          # parallel backend :9999 + frontend :9527
+```
 
-# Frontend
-cd web && pnpm install && pnpm dev      # port 9527
+### New business module
+```
+make cli-init MOD=inventory          # scaffold app/business/inventory/
+# edit app/business/inventory/models.py
+make cli-gen-all MOD=inventory CN=库存管理   # generate backend + frontend CRUD
+make mm                              # makemigrations + migrate
+make dev
+```
+
+### Quality gate
+```
+make check-all    # ruff + basedpyright + pytest + eslint + oxlint + vue-tsc
+```
 
 ## Project Structure
 
-/app/                    # Backend (FastAPI)
-  api/v1/                # Routers: auth, route, system_manage
-  controllers/           # Business logic: user, role, menu, api
-  models/system/         # Tortoise ORM models
-  schemas/               # Pydantic request/response schemas
-  core/                  # Init, auth, CRUD base, middleware, context
-  settings/              # Pydantic Settings (.env)
-  utils/                 # Security (argon2, JWT), tools
+```
+/app/                      # Backend (FastAPI)
+  __init__.py              # App factory, lifespan, multi-worker init
+  core/                    # Framework infra (no business logic)
+  system/                  # Auth, RBAC, user, role, menu, api, dictionary
+  business/                # Auto-discovered business modules
+    hr/                    #   Reference module (employee / department / tags)
+  cli/                     # Code generator (init / gen / gen-web / initdb)
+  utils/                   # Unified re-export surface for business modules
 
-/web/src/                # Frontend (Vue3)
-  views/                 # Page components
-  service-alova/         # HTTP client + API endpoints
-  store/modules/         # Pinia: auth, route, tab, theme, app
-  router/                # Elegant Router + guards
-  layouts/               # Base layout + blank layout
-  components/            # Reusable components
-  locales/               # i18n (zh-CN, en-US)
-  hooks/                 # Vue composables
-  typings/               # TypeScript declarations
+/web/src/                  # Frontend (Vue3)
+  views/                   # Pages (Elegant Router source)
+  service/api/             # Alova API wrappers
+  typings/api/             # TypeScript type declarations
+  store/modules/           # Pinia: auth / route / tab / theme / app
+  router/                  # Elegant Router config + guards
+  layouts/                 # Base layout, blank layout
+  locales/                 # vue-i18n (zh-CN / en-US)
+  hooks/                   # Vue composables (useNaivePaginatedTable, useRouterPush)
+  theme/                   # Theme settings
 
-/fastsoy-admin-docs/     # VitePress documentation site
-/deploy/                 # Docker configs (Dockerfile, nginx)
-/migrations/             # Tortoise ORM DB migrations
+/deploy/                   # Docker + Nginx configs
+/migrations/               # Tortoise ORM migrations (per DB app)
+/tests/                    # pytest suites
+Makefile                   # Single entrypoint for all commands
+```
