@@ -112,7 +112,7 @@ def gen_service_ts(module: str, models: list[ModelInfo]) -> str:
             "  });",
             "}",
             "",
-            f"export function fetchGet{entity}(id: number) {{",
+            f"export function fetchGet{entity}(id: string) {{",
             f"  return request<Api.{ns}.{entity}>({{",
             f"    url: `{url_base}/${{id}}`,",
             "    method: 'get'",
@@ -174,8 +174,8 @@ def gen_typings_dts(module: str, models: list[ModelInfo], search_fields_map: dic
     lines = [
         "declare namespace Api {",
         f"  namespace {ns} {{",
-        "    type CommonDeleteParams = { id: number };",
-        "    type CommonBatchDeleteParams = { ids: number[] };",
+        "    type CommonDeleteParams = { id: string };",
+        "    type CommonBatchDeleteParams = { ids: string[] };",
         "    type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;",
         "",
     ]
@@ -194,7 +194,7 @@ def gen_typings_dts(module: str, models: list[ModelInfo], search_fields_map: dic
             lines.append(_ts_field_line(camel, field_ts_type(f), optional=False, nullable=not f.required))
         for r in fk_relations:
             camel = snake_to_camel(r.name) + "Id"
-            lines.append(_ts_field_line(camel, "number", optional=False, nullable=r.nullable))
+            lines.append(_ts_field_line(camel, "string", optional=False, nullable=r.nullable))
         lines.append("    }>;")
         lines.append("")
 
@@ -205,12 +205,12 @@ def gen_typings_dts(module: str, models: list[ModelInfo], search_fields_map: dic
             lines.append(_ts_field_line(camel, field_ts_type(f), optional=not f.required, nullable=not f.required))
         for r in fk_relations:
             camel = snake_to_camel(r.name) + "Id"
-            lines.append(_ts_field_line(camel, "number", optional=r.nullable, nullable=r.nullable))
+            lines.append(_ts_field_line(camel, "string", optional=r.nullable, nullable=r.nullable))
         lines.append("    };")
         lines.append("")
 
         # ---- UpdateParams ----
-        lines.append(f"    type {entity}UpdateParams = {{ id?: number }} & Partial<{entity}AddParams>;")
+        lines.append(f"    type {entity}UpdateParams = {{ id?: string }} & Partial<{entity}AddParams>;")
         lines.append("")
 
         # ---- SearchParams ----
@@ -420,16 +420,16 @@ const {{ drawerVisible, operateType, editingData, handleAdd, handleEdit, checked
   useTableOperate(data, 'id', getData);
 
 async function handleBatchDelete() {{
-  const {{ error }} = await fetchBatchDelete{entity}({{ ids: checkedRowKeys.value.map(k => Number(k)) }});
+  const {{ error }} = await fetchBatchDelete{entity}({{ ids: checkedRowKeys.value as string[] }});
   if (!error) onBatchDeleted();
 }}
 
-async function handleDelete(id: number) {{
+async function handleDelete(id: string) {{
   const {{ error }} = await fetchDelete{entity}({{ id }});
   if (!error) onDeleted();
 }}
 
-function edit(id: number) {{
+function edit(id: string) {{
   handleEdit(id);
 }}
 </script>
