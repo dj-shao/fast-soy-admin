@@ -20,13 +20,21 @@ GUIDE = """\
 
 \033[1;33m📋 后续步骤：\033[0m
 
-  \033[1m1.\033[0m 按提示合并 i18n 片段到 zh-cn.ts / en-us.ts：
-     \033[36mweb/src/locales/langs/_generated/{module}/zh-cn.ts\033[0m
-     \033[36mweb/src/locales/langs/_generated/{module}/en-us.ts\033[0m
+  \033[1m1.\033[0m 合并以下三个片段（顺序随意）：
+
+     \033[36mweb/src/locales/langs/_generated/{module}/zh-cn.md\033[0m
+       → 合并到 \033[36mweb/src/locales/langs/zh-cn.ts\033[0m 的 route / page 对象
+
+     \033[36mweb/src/locales/langs/_generated/{module}/en-us.md\033[0m
+       → 合并到 \033[36mweb/src/locales/langs/en-us.ts\033[0m 的 route / page 对象
+
+     \033[36mweb/src/locales/langs/_generated/{module}/app.d.ts.md\033[0m
+       → 合并到 \033[36mweb/src/typings/app.d.ts\033[0m 的 \033[1mApp.I18n.Schema.page\033[0m 子树
+       \033[33m⚠\033[0m 不合并会导致 \033[36m$t('page.{module}...')\033[0m 编译报错 \033[2m(not assignable to I18nKey)\033[0m
 
   \033[1m2.\033[0m 搜索生成代码中的 \033[33mTODO\033[0m 注释，补充外键 / 枚举的 options 数据源
 
-  \033[1m3.\033[0m 启动前端验证：
+  \033[1m3.\033[0m 启动前端验证（首次启动会自动更新 elegant-router.d.ts 的路由类型）：
 
      \033[36mcd web && pnpm dev\033[0m
 """
@@ -52,7 +60,11 @@ def _prompt_fields(models, label: str, candidates_fn) -> dict[str, list[str]]:
 
 def _format_generated_files(results: list[tuple[str, str]]) -> None:
     """对生成/追加的前端文件执行 oxfmt 格式化 + eslint --fix。"""
-    targets = [str(WEB_ROOT / rel_path) for rel_path, status in results if status in ("created", "appended")]
+    targets = [
+        str(WEB_ROOT / rel_path)
+        for rel_path, status in results
+        if status in ("created", "appended") and rel_path.endswith((".ts", ".tsx", ".vue", ".d.ts"))
+    ]
     if not targets:
         return
 

@@ -437,7 +437,7 @@ function edit(id: string) {{
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
     <{entity}Search v-model:model="searchParams" @search="getDataByPage" />
-    <NCard :title="$t('{i18n_page}.title')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
+    <NCard :title="$t('{i18n_page}.pageTitle')" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation
           v-model:columns="columnChecks"
@@ -619,7 +619,7 @@ def gen_view_drawer(module: str, model: ModelInfo) -> str:
     if needs_status_import:
         extra_imports.append("import { statusTypeOptions } from '@/constants/business';")
 
-    entity_title_key = f"{i18n_page}.title"
+    entity_title_key = f"{i18n_page}.pageTitle"
     add_key = f"{i18n_page}.add{entity}"
     edit_key = f"{i18n_page}.edit{entity}"
 
@@ -728,94 +728,162 @@ watch(visible, () => {{
 
 
 def gen_i18n_zh(module: str, module_cn: str, models: list[ModelInfo]) -> str:
-    """生成 zh-cn 片段 — 从 description 提取。"""
+    """生成 zh-cn 片段 — markdown 格式，从 description 提取。"""
     lines = [
-        "// 将以下内容合并到 web/src/locales/langs/zh-cn.ts",
+        f"# zh-cn 合并片段（模块：{module_cn}）",
         "",
-        "// 1. route 对象中追加:",
-        f"//   {module}: '{module_cn}',",
+        "将下面两个代码块对应合并到 `web/src/locales/langs/zh-cn.ts`。",
+        "",
+        "## 1. `route` 对象追加",
+        "",
+        "```ts",
+        f"{module}: '{module_cn}',",
     ]
     for model in models:
-        lines.append(f"//   {module}_{model.snake_name}: '{model.cn_name}',")
+        lines.append(f"{module}_{model.snake_name}: '{model.cn_name}',")
+    lines.append("```")
     lines.append("")
-    lines.append("// 2. page 对象中追加:")
-    lines.append(f"//   {module}: {{")
-    lines.append("//     common: { status: '状态', form: { status: '请选择状态' } },")
+    lines.append("## 2. `page` 对象追加")
+    lines.append("")
+    lines.append("```ts")
+    lines.append(f"{module}: {{")
+    lines.append("  common: { status: '状态', form: { status: '请选择状态' } },")
     for model in models:
         entity_snake = model.snake_name
         fields = model.schema_fields
         fk_relations = [r for r in model.relations if r.relation_type in ("ForeignKeyField", "OneToOneField")]
 
-        lines.append(f"//     {entity_snake}: {{")
-        lines.append(f"//       title: '{model.cn_name}',")
+        lines.append(f"  {entity_snake}: {{")
+        lines.append(f"    pageTitle: '{model.cn_name}',")
         for f in fields:
             camel = snake_to_camel(f.name)
             title = cn_title(f.description, f.name)
-            lines.append(f"//       {camel}: '{title}',")
+            lines.append(f"    {camel}: '{title}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"//       {camel}: '{camel}',  // TODO: 手动填写中文")
-        lines.append("//       form: {")
+            lines.append(f"    {camel}: '{camel}',  // TODO: 手动填写中文")
+        lines.append("    form: {")
         for f in fields:
             camel = snake_to_camel(f.name)
             title = cn_title(f.description, f.name)
             verb = "请选择" if field_form_component(f).startswith("select") else "请输入"
-            lines.append(f"//         {camel}: '{verb}{title}',")
+            lines.append(f"      {camel}: '{verb}{title}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"//         {camel}: '请选择{camel}',  // TODO")
-        lines.append("//       },")
-        lines.append(f"//       add{model.name}: '新增{model.cn_name}',")
-        lines.append(f"//       edit{model.name}: '编辑{model.cn_name}'")
-        lines.append("//     },")
-    lines.append("//   }")
+            lines.append(f"      {camel}: '请选择{camel}',  // TODO")
+        lines.append("    },")
+        lines.append(f"    add{model.name}: '新增{model.cn_name}',")
+        lines.append(f"    edit{model.name}: '编辑{model.cn_name}'")
+        lines.append("  },")
+    lines.append("}")
+    lines.append("```")
     lines.append("")
     return "\n".join(lines)
 
 
 def gen_i18n_en(module: str, models: list[ModelInfo]) -> str:
-    """生成 en-us 片段 — fallback 为字段名 camelCase。"""
+    """生成 en-us 片段 — markdown 格式，fallback 为字段名 camelCase。"""
     module_pascal = snake_to_pascal(module)
     lines = [
-        "// Merge the following into web/src/locales/langs/en-us.ts",
+        f"# en-us merge snippet (module: {module_pascal})",
         "",
-        "// 1. Append to route object:",
-        f"//   {module}: '{module_pascal}',",
+        "Merge both blocks below into `web/src/locales/langs/en-us.ts`.",
+        "",
+        "## 1. Append to `route` object",
+        "",
+        "```ts",
+        f"{module}: '{module_pascal}',",
     ]
     for model in models:
         name_title = re.sub(r"(?<!^)(?=[A-Z])", " ", model.name).strip()
-        lines.append(f"//   {module}_{model.snake_name}: '{name_title}',")
+        lines.append(f"{module}_{model.snake_name}: '{name_title}',")
+    lines.append("```")
     lines.append("")
-    lines.append("// 2. Append to page object:")
-    lines.append(f"//   {module}: {{")
-    lines.append("//     common: { status: 'Status', form: { status: 'Please select status' } },")
+    lines.append("## 2. Append to `page` object")
+    lines.append("")
+    lines.append("```ts")
+    lines.append(f"{module}: {{")
+    lines.append("  common: { status: 'Status', form: { status: 'Please select status' } },")
     for model in models:
         entity_snake = model.snake_name
         entity_en = re.sub(r"(?<!^)(?=[A-Z])", " ", model.name).strip()
         fields = model.schema_fields
         fk_relations = [r for r in model.relations if r.relation_type in ("ForeignKeyField", "OneToOneField")]
 
-        lines.append(f"//     {entity_snake}: {{")
-        lines.append(f"//       title: '{entity_en}',")
+        lines.append(f"  {entity_snake}: {{")
+        lines.append(f"    pageTitle: '{entity_en}',")
         for f in fields:
             camel = snake_to_camel(f.name)
-            lines.append(f"//       {camel}: '{camel}',")
+            lines.append(f"    {camel}: '{camel}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"//       {camel}: '{camel}',")
-        lines.append("//       form: {")
+            lines.append(f"    {camel}: '{camel}',")
+        lines.append("    form: {")
         for f in fields:
             camel = snake_to_camel(f.name)
             verb = "Please select" if field_form_component(f).startswith("select") else "Please input"
-            lines.append(f"//         {camel}: '{verb} {camel}',")
+            lines.append(f"      {camel}: '{verb} {camel}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"//         {camel}: 'Please select {camel}',")
-        lines.append("//       },")
-        lines.append(f"//       add{model.name}: 'Add {entity_en}',")
-        lines.append(f"//       edit{model.name}: 'Edit {entity_en}'")
-        lines.append("//     },")
-    lines.append("//   }")
+            lines.append(f"      {camel}: 'Please select {camel}',")
+        lines.append("    },")
+        lines.append(f"    add{model.name}: 'Add {entity_en}',")
+        lines.append(f"    edit{model.name}: 'Edit {entity_en}'")
+        lines.append("  },")
+    lines.append("}")
+    lines.append("```")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def gen_i18n_schema_dts(module: str, models: list[ModelInfo]) -> str:
+    """生成 App.I18n.Schema.page.<module> 扩展片段 — markdown。
+
+    Schema 是强类型 type，未扩展时 $t('page.<module>...') 会在 vue-tsc 里报
+    "is not assignable to parameter of type 'I18nKey'"。
+    """
+    lines = [
+        f"# `App.I18n.Schema.page` 扩展片段（模块：{module}）",
+        "",
+        "将下面代码块合并到 `web/src/typings/app.d.ts` 里 `App.I18n.Schema.page` 对象中",
+        "（靠近其它模块条目，例如 `hr: {...}` 之后）。",
+        "",
+        "没有这一步，生成的视图里 `$t('page.<module>.<entity>.xxx')` 会编译报错:",
+        "`is not assignable to parameter of type 'I18nKey'`。",
+        "",
+        "```ts",
+        f"{module}: {{",
+        "  common: {",
+        "    status: string;",
+        "    form: { status: string };",
+        "  };",
+    ]
+    for model in models:
+        entity_snake = model.snake_name
+        fields = model.schema_fields
+        fk_relations = [r for r in model.relations if r.relation_type in ("ForeignKeyField", "OneToOneField")]
+
+        lines.append(f"  {entity_snake}: {{")
+        lines.append("    pageTitle: string;")
+        for f in fields:
+            lines.append(f"    {snake_to_camel(f.name)}: string;")
+        for r in fk_relations:
+            lines.append(f"    {snake_to_camel(r.name)}: string;")
+        lines.append("    form: {")
+        for f in fields:
+            lines.append(f"      {snake_to_camel(f.name)}: string;")
+        for r in fk_relations:
+            lines.append(f"      {snake_to_camel(r.name)}: string;")
+        lines.append("    };")
+        lines.append(f"    add{model.name}: string;")
+        lines.append(f"    edit{model.name}: string;")
+        lines.append("  };")
+    lines.append("};")
+    lines.append("```")
+    lines.append("")
+    lines.append("此外，`App.I18n.Schema.route` 使用 `Record<I18nRouteKey, string>`，")
+    lines.append("`I18nRouteKey` 由 Elegant Router 从 `web/src/views/` 目录自动推导 ——")
+    lines.append("只要 `pnpm dev` 启动过一次，`web/src/typings/elegant-router.d.ts` 会自动更新，无需手动改。")
     lines.append("")
     return "\n".join(lines)
 
@@ -889,9 +957,11 @@ def generate_web(
         write(view_dir / "modules" / f"{entity_kebab}-operate-drawer.vue", gen_view_drawer(module, model))
 
     # i18n 片段
+    # i18n 片段 — .md 避免被 oxlint/eslint 当 TS 源码扫描
     i18n_dir = web_root / "src" / "locales" / "langs" / "_generated" / module
-    write(i18n_dir / "zh-cn.ts", gen_i18n_zh(module, module_cn, models))
-    write(i18n_dir / "en-us.ts", gen_i18n_en(module, models))
+    write(i18n_dir / "zh-cn.md", gen_i18n_zh(module, module_cn, models))
+    write(i18n_dir / "en-us.md", gen_i18n_en(module, models))
+    write(i18n_dir / "app.d.ts.md", gen_i18n_schema_dts(module, models))
 
     # 追加 index.ts
     status = append_to_index_ts(web_root, module)

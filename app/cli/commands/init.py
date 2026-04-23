@@ -111,6 +111,7 @@ def init(module_name: str, cn_name: str):
     click.echo(
         GUIDE_TEXT.format(
             module_name=module_name,
+            cn_name=cn_name,
             module_path=module_dir.relative_to(BUSINESS_DIR.parent.parent),
             models_path=(module_dir / "models.py").relative_to(BUSINESS_DIR.parent.parent),
         )
