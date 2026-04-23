@@ -95,7 +95,7 @@ def gen_web(module_name: str, cn_name: str | None, force: bool, no_format: bool)
     models_path = module_dir / "models.py"
 
     if not models_path.exists():
-        raise click.ClickException(f"找不到 {models_path.relative_to(PROJECT_ROOT)}\n  请先运行: python -m app.cli init {module_name}")
+        raise click.ClickException(f"找不到 {models_path.relative_to(PROJECT_ROOT)}\n  请先运行: uv run python -m app.cli init {module_name}")
 
     if not WEB_ROOT.exists():
         raise click.ClickException(f"找不到前端目录 {WEB_ROOT}")

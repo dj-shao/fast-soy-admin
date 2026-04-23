@@ -16,9 +16,9 @@ MODELS_TEMPLATE = '''\
 
 在此文件中定义 Tortoise ORM 模型，完成后运行:
 
-    python -m app.cli gen {module_name}
+    make cli-gen-all MOD={module_name} CN={cn_name}
 
-即可自动生成 schemas / controllers / api 等文件。
+即可一次生成后端 schemas / controllers / api 及前端 service / views / i18n 等文件。
 """
 
 from tortoise import fields
@@ -59,19 +59,20 @@ GUIDE_TEXT = """\
      • 类的 docstring 写中文名（如 \033[36m\"\"\"仓库\"\"\"\033[0m），将作为 API summary 前缀
      • Meta.table 建议用 \033[36mbiz_{module_name}_xxx\033[0m 前缀
 
-  \033[1m2.\033[0m 模型写好后，运行代码生成：
+  \033[1m2.\033[0m 模型写好后，运行代码生成（后端 + 前端 CRUD 一次生成）：
 
-     \033[36mpython -m app.cli gen {module_name}\033[0m
+     \033[36mmake cli-gen-all MOD={module_name} CN={cn_name}\033[0m
 
-     将自动生成 schemas.py / controllers.py / services.py / api/ 等文件。
+     将自动生成后端 schemas.py / controllers.py / services.py / api/，
+     以及前端 service / typings / views / i18n 等文件。
 
   \033[1m3.\033[0m 生成后执行数据库迁移：
 
-     \033[36mtortoise makemigrations && tortoise migrate\033[0m
+     \033[36mmake mm\033[0m
 
   \033[1m4.\033[0m 启动服务验证：
 
-     \033[36mpython run.py\033[0m
+     \033[36mmake run\033[0m
 """
 
 

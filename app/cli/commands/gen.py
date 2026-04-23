@@ -68,7 +68,7 @@ def gen(module_name: str, force: bool, no_format: bool):
     models_path = module_dir / "models.py"
 
     if not module_dir.exists():
-        raise click.ClickException(f"模块目录不存在: {module_dir.relative_to(BUSINESS_DIR.parent.parent)}\n  请先运行: python -m app.cli init {module_name}")
+        raise click.ClickException(f"模块目录不存在: {module_dir.relative_to(BUSINESS_DIR.parent.parent)}\n  请先运行: uv run python -m app.cli init {module_name}")
 
     if not models_path.exists():
         raise click.ClickException(f"models.py 不存在: {models_path.relative_to(BUSINESS_DIR.parent.parent)}")
