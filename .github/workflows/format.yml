@@ -1,0 +1,68 @@
+name: Auto Format
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'auto-format'
+    name: Run ruff + eslint auto-fix and commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install backend deps
+        run: uv sync --frozen
+
+      - name: Ruff auto-fix + format
+        run: |
+          uv run ruff check --fix app/
+          uv run ruff format app/
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend lint --fix
+        working-directory: web
+        run: pnpm lint
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: auto-format via github actions"
+            git push
+          else
+            echo "No formatting changes."
+          fi
