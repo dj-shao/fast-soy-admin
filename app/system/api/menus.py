@@ -1,3 +1,6 @@
+from tortoise.expressions import Q
+
+from app.core.autodiscover import discover_business_module_names
 from app.core.base_schema import Fail, Success, SuccessExtra
 from app.core.code import Code
 from app.core.router import CRUDRouter, SearchFieldConfig
@@ -47,22 +50,50 @@ async def build_menu_tree(menus: list[Menu], parent_id: int = 0, simple: bool = 
 # ---- 覆盖 list：返回树结构 ----
 
 
+async def _collect_business_menu_ids() -> set[int]:
+    """收集所有挂在业务模块根路由下的菜单 ID（含子树）。"""
+    biz_names = discover_business_module_names()
+    if not biz_names:
+        return set()
+    roots = await Menu.filter(parent_id=0, route_name__in=biz_names).only("id")
+    if not roots:
+        return set()
+    collected: set[int] = {m.id for m in roots}
+    frontier: set[int] = set(collected)
+    while frontier:
+        children = await Menu.filter(parent_id__in=list(frontier)).only("id")
+        new_ids = {c.id for c in children} - collected
+        if not new_ids:
+            break
+        collected |= new_ids
+        frontier = new_ids
+    return collected
+
+
 @crud.override("list")
 async def _list_menus(obj_in: MenuSearch):
-    q = menu_controller.build_search(
-        obj_in,
-        contains_fields=["menu_name"],
-        exact_fields=["menu_type", "status_type"],
-    )
-    total, menus = await menu_controller.list(
-        page=obj_in.current,
-        page_size=obj_in.size,
-        search=q,
-        order=["id"],
-        prefetch_related=["by_menu_buttons"],
-    )
+    # 三个开关语义：菜单属于某类别时，只要对应开关开启即显示；
+    # 不属于任何特殊类别的"普通菜单"始终显示。
+    biz_ids = list(await _collect_business_menu_ids())
+
+    # 普通菜单：非常量、非隐藏、非业务
+    regular = Q(constant=False) & Q(hide_in_menu=False)
+    if biz_ids:
+        regular &= ~Q(id__in=biz_ids)
+    combined = regular
+
+    if obj_in.include_constant:
+        combined |= Q(constant=True)
+    if obj_in.include_hidden:
+        combined |= Q(hide_in_menu=True)
+    if obj_in.include_business and biz_ids:
+        combined |= Q(id__in=biz_ids)
+
+    # 菜单为树结构，按扁平记录分页会让子树看不到；此处一次性返回全部匹配项
+    menus = await Menu.filter(combined).order_by("id").prefetch_related("by_menu_buttons")
     menu_tree = await build_menu_tree(menus, simple=False)
-    return SuccessExtra(data={"records": menu_tree}, total=total, current=obj_in.current, size=obj_in.size)
+    total = len(menus)
+    return SuccessExtra(data={"records": menu_tree}, total=total, current=1, size=total or 1)
 
 
 # ---- 覆盖 create/update：按钮关联 + active_menu 处理 ----

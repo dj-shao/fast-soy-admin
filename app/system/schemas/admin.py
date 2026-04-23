@@ -7,7 +7,7 @@ from app.core.base_schema import PageQueryBase, SchemaBase
 from app.core.code import Code
 from app.core.data_scope import DataScopeType
 from app.core.exceptions import SchemaValidationError
-from app.core.types import Int32
+from app.core.types import Int32, SqidId
 from app.system.models import IconType, MenuType, StatusType
 
 # ============================================================
@@ -20,7 +20,7 @@ class RoleBase(SchemaBase):
     role_code: Annotated[str, Field(max_length=20)] | None = Field(None, title="角色编码")
     role_desc: Annotated[str, Field(max_length=500)] | None = Field(None, title="角色描述")
     data_scope: DataScopeType | None = Field(None, title="数据权限范围")
-    by_role_home_id: Int32 | None = Field(None, title="角色首页")
+    by_role_home_id: SqidId | None = Field(None, title="角色首页")
     status_type: StatusType | None = Field(None, title="角色状态")
 
 
@@ -45,10 +45,10 @@ class RoleUpdate(RoleBase): ...
 
 
 class RoleUpdateAuthrization(SchemaBase):
-    by_role_home_id: Int32 | None = Field(None, title="角色首页菜单id")
-    by_role_menu_ids: list[Int32] | None = Field(None, title="角色菜单列表")
-    by_role_api_ids: list[Int32] | None = Field(None, title="角色API列表")
-    by_role_button_ids: list[Int32] | None = Field(None, title="角色按钮列表")
+    by_role_home_id: SqidId | None = Field(None, title="角色首页菜单id")
+    by_role_menu_ids: list[SqidId] | None = Field(None, title="角色菜单列表")
+    by_role_api_ids: list[SqidId] | None = Field(None, title="角色API列表")
+    by_role_button_ids: list[SqidId] | None = Field(None, title="角色按钮列表")
 
 
 # ============================================================
@@ -98,7 +98,7 @@ class MenuBase(SchemaBase):
     order: Int32 | None = Field(None, description="菜单顺序")
     component: Annotated[str, Field(max_length=100)] | None = Field(None, description="路由组件")
 
-    parent_id: Int32 | None = Field(None, description="父菜单ID")
+    parent_id: SqidId | None = Field(None, description="父菜单ID")
     i18n_key: Annotated[str, Field(max_length=100)] | None = Field(None, description="用于国际化的展示文本，优先级高于title")
 
     icon: Annotated[str, Field(max_length=100)] | None = Field(None, description="图标名称")
@@ -118,9 +118,9 @@ class MenuBase(SchemaBase):
 
 
 class MenuSearch(PageQueryBase):
-    menu_name: Annotated[str, Field(max_length=100)] | None = Field(None, title="菜单名称")
-    menu_type: MenuType | None = Field(None, title="菜单类型")
-    status_type: StatusType | None = Field(None, title="状态")
+    include_constant: bool | None = Field(False, title="是否包含常量路由")
+    include_hidden: bool | None = Field(False, title="是否包含隐藏菜单")
+    include_business: bool | None = Field(False, title="是否包含业务菜单")
 
 
 class MenuCreate(MenuBase):

@@ -42,6 +42,11 @@ def _discover_modules() -> list[str]:
     return sorted(p.name for p in BUSINESS_ROOT.iterdir() if p.is_dir() and not p.name.startswith("_") and (p / "__init__.py").exists())
 
 
+def discover_business_module_names() -> list[str]:
+    """返回 app/business/ 下的所有业务模块名称。"""
+    return _discover_modules()
+
+
 def discover_business_models() -> list[str]:
     """返回用于 Tortoise ORM 注册的模型模块路径列表（使用默认连接）。"""
     model_modules = []

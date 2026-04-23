@@ -335,6 +335,18 @@ def _collect_declared_buttons(children: list[dict]) -> set[str]:
 
 
 async def _init_menu_data() -> None:
+    # 常量路由（无需登录即可访问）— HR 公开数据展示 Demo
+    await ensure_menu(
+        menu_name="HR数据展示",
+        route_name="showcase",
+        route_path="/showcase",
+        component="layout.blank$view.showcase",
+        menu_type="1",
+        constant=True,
+        hide_in_menu=True,
+        order=100,
+    )
+
     await ensure_menu(
         menu_name="HR管理",
         route_name="hr",
