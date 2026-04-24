@@ -39,6 +39,7 @@ dev = [
   "httpx>=0.28.1",
   "fakeredis>=2.35.0",
   "basedpyright>=1.39",
+  "ruff>=0.15",
 ]
 
 [tool.pytest.ini_options]
