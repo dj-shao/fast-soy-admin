@@ -27,6 +27,7 @@ class RadarSettings(BaseSettings):
         "/api/v1/auth/login",
         "/api/v1/auth/code-login",
         "/api/v1/auth/register",
+        "/__radar/api/_boom",
     ]
     RADAR_SLOW_QUERY_THRESHOLD_MS: float = 100.0
     RADAR_CAPTURE_RESPONSE_BODY: bool = True
