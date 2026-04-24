@@ -12,6 +12,7 @@ class RadarSettings(BaseSettings):
     RADAR_MAX_BODY_SIZE: int = 65536
     RADAR_EXCLUDE_PATHS: list[str] = [
         "/__radar",
+        "/health",
         "/static",
         "/docs",
         "/openapi.json",

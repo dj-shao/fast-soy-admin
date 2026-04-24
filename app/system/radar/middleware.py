@@ -50,11 +50,11 @@ class RadarMiddleware:
         is_excluded = any(path.startswith(exc) for exc in RADAR_SETTINGS.RADAR_EXCLUDE_PATHS)
 
         if is_excluded and not is_included:
-            # 被排除的路径仍然设置上下文，以便 radar_log 可用
-            # 请求结束后仅在有 user_logs 时才落库
-            await self._handle_http(scope, receive, send, flush_only_if_logged=True)
-        else:
-            await self._handle_http(scope, receive, send, flush_only_if_logged=False)
+            # 被排除的路径完全跳过 Radar，不建上下文、不记录
+            await self.app(scope, receive, send)
+            return
+
+        await self._handle_http(scope, receive, send, flush_only_if_logged=False)
 
     async def _handle_http(self, scope: Scope, receive: Receive, send: Send, *, flush_only_if_logged: bool = False) -> None:
         x_request_id = CTX_X_REQUEST_ID.get("")

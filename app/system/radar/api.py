@@ -7,6 +7,7 @@ from functools import partial
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
+from app.core.config import APP_SETTINGS
 from app.system.radar import db
 from app.system.radar.config import RADAR_SETTINGS
 from app.system.services.monitor import collector
@@ -170,3 +171,16 @@ async def get_monitor_basic_info():
 async def get_monitor_processes(limit: int = Query(default=10, ge=1, le=50)):
     data = await asyncio.to_thread(partial(collector.get_top_processes, limit))
     return {"code": "0000", "msg": "OK", "data": data}
+
+
+@router.get("/_boom", summary="[dev] 触发未捕获异常以验证 Radar 异常捕获", include_in_schema=False)
+async def boom(kind: str = Query(default="runtime", pattern="^(runtime|zero|key|attr)$")):
+    if not APP_SETTINGS.APP_DEBUG:
+        return {"code": "2200", "msg": "boom only available when APP_DEBUG=true", "data": None}
+    if kind == "zero":
+        _ = 1 / 0
+    elif kind == "key":
+        _ = {}["missing"]
+    elif kind == "attr":
+        _ = None.foo  # type: ignore[attr-defined]
+    raise RuntimeError("radar smoke test")

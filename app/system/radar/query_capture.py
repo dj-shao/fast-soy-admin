@@ -6,14 +6,62 @@ import time
 from functools import wraps
 from typing import Any
 
-from tortoise.backends.sqlite.client import SqliteClient, SqliteTransactionWrapper
-
 from app.system.radar.ctx import CTX_RADAR
 
 # 递归防护：Radar 自身写入 DB 时设为 True，避免捕获自身产生的 SQL
 CTX_RADAR_WRITING: contextvars.ContextVar[bool] = contextvars.ContextVar("radar_writing", default=False)
 
 _originals: dict[str, Any] = {}
+_patched_classes: list[type] = []
+
+
+def _discover_client_classes() -> list[type]:
+    """按需导入各数据库后端的 client / transaction wrapper 类，返回实际可用的类列表。"""
+    classes: list[type] = []
+    # sqlite
+    try:
+        from tortoise.backends.sqlite.client import SqliteClient, SqliteTransactionWrapper
+
+        classes.extend([SqliteClient, SqliteTransactionWrapper])
+    except ImportError:
+        pass
+    # postgres - asyncpg
+    try:
+        from tortoise.backends.asyncpg.client import AsyncpgDBClient
+        from tortoise.backends.asyncpg.client import TransactionWrapper as AsyncpgTransactionWrapper
+
+        classes.extend([AsyncpgDBClient, AsyncpgTransactionWrapper])
+    except ImportError:
+        pass
+    # postgres - psycopg
+    try:
+        from tortoise.backends.psycopg import client as _psycopg_client
+
+        classes.append(_psycopg_client.PsycopgClient)
+        _psycopg_tw = getattr(_psycopg_client, "TransactionWrapper", None)
+        if _psycopg_tw is not None:
+            classes.append(_psycopg_tw)
+    except ImportError:
+        pass
+    # mysql
+    try:
+        from tortoise.backends.mysql.client import MySQLClient
+        from tortoise.backends.mysql.client import TransactionWrapper as MySQLTransactionWrapper
+
+        classes.extend([MySQLClient, MySQLTransactionWrapper])
+    except ImportError:
+        pass
+    # mssql / odbc
+    try:
+        from tortoise.backends.odbc import client as _odbc_client
+
+        classes.append(_odbc_client.ODBCClient)
+        _odbc_tw = getattr(_odbc_client, "TransactionWrapper", None)
+        if _odbc_tw is not None:
+            classes.append(_odbc_tw)
+    except ImportError:
+        pass
+    return classes
 
 
 def _serialize_params(values: Any) -> str | None:
@@ -89,7 +137,8 @@ def install_query_capture() -> None:
     if _originals:
         return  # 已安装，跳过
 
-    for cls in (SqliteClient, SqliteTransactionWrapper):
+    _patched_classes.extend(_discover_client_classes())
+    for cls in _patched_classes:
         cls_name = cls.__name__
         for method_name in ("execute_query", "execute_insert", "execute_query_dict"):
             original = getattr(cls, method_name, None)
@@ -101,11 +150,11 @@ def install_query_capture() -> None:
         original_many = getattr(cls, "execute_many", None)
         if original_many:
             _originals[f"{cls_name}.execute_many"] = original_many
-            cls.execute_many = _make_patched_many(original_many)
+            setattr(cls, "execute_many", _make_patched_many(original_many))
 
 
 def uninstall_query_capture() -> None:
-    for cls in (SqliteClient, SqliteTransactionWrapper):
+    for cls in _patched_classes:
         cls_name = cls.__name__
         for method_name in ("execute_query", "execute_insert", "execute_query_dict", "execute_many"):
             key = f"{cls_name}.{method_name}"
@@ -113,3 +162,4 @@ def uninstall_query_capture() -> None:
                 setattr(cls, method_name, _originals[key])
 
     _originals.clear()
+    _patched_classes.clear()
