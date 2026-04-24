@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import signal
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -98,7 +99,12 @@ async def _run_init_data(_app: FastAPI) -> bool:
                         "    make mm                # makemigrations + migrate\n\n"
                         "详见 CLAUDE.md / README 的 “数据库迁移” 一节。\n" + sep
                     )
-                    raise SystemExit(1) from e
+                    # 通知 granian 主进程停止（避免持续 respawn），并静默退出当前 worker
+                    try:
+                        os.kill(os.getppid(), signal.SIGTERM)
+                    except OSError:
+                        pass
+                    os._exit(1)
                 raise
             await refresh_api_list()
             await init_users()
