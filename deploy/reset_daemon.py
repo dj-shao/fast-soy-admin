@@ -186,7 +186,8 @@ async def reset_once() -> None:
 if __name__ == "__main__":
     # app.core.log 会在 import 时 remove 掉 loguru 默认的 stderr sink, 且只在 APP_DEBUG=true 时加回 stdout,
     # 否则本 daemon 的心跳日志会全部落到容器内文件, docker logs 空白。这里独立补一个 stdout sink。
-    logger.add(sys.stdout, level="INFO")
+    if not APP_SETTINGS.APP_DEBUG:
+        logger.add(sys.stdout, level="INFO")
     while True:
         run_async(reset_once())
         logger.info("Reset all tables")
