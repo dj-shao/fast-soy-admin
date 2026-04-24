@@ -662,7 +662,7 @@ const model = ref(createDefaultModel());
 function createDefaultModel(): Api.{ns}.{entity}AddParams {{
   return {{
 {("," + chr(10)).join(default_entries)}
-  }} as Api.{ns}.{entity}AddParams;
+  }} as unknown as Api.{ns}.{entity}AddParams;
 }}
 
 const rules: Record<string, App.Global.FormRule> = {{
@@ -761,7 +761,10 @@ def gen_i18n_zh(module: str, module_cn: str, models: list[ModelInfo]) -> str:
             lines.append(f"    {camel}: '{title}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"    {camel}: '{camel}',  // TODO: 手动填写中文")
+            if r.description:
+                lines.append(f"    {camel}: '{cn_title(r.description, r.name)}',")
+            else:
+                lines.append(f"    {camel}: '{camel}',  // TODO: 手动填写中文")
         lines.append("    form: {")
         for f in fields:
             camel = snake_to_camel(f.name)
@@ -770,7 +773,10 @@ def gen_i18n_zh(module: str, module_cn: str, models: list[ModelInfo]) -> str:
             lines.append(f"      {camel}: '{verb}{title}',")
         for r in fk_relations:
             camel = snake_to_camel(r.name)
-            lines.append(f"      {camel}: '请选择{camel}',  // TODO")
+            if r.description:
+                lines.append(f"      {camel}: '请选择{cn_title(r.description, r.name)}',")
+            else:
+                lines.append(f"      {camel}: '请选择{camel}',  // TODO")
         lines.append("    },")
         lines.append(f"    add{model.name}: '新增{model.cn_name}',")
         lines.append(f"    edit{model.name}: '编辑{model.cn_name}'")

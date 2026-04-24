@@ -53,6 +53,7 @@ class RelationInfo:
     related_model: str = ""  # "models.Warehouse"
     related_name: str = ""
     nullable: bool = False
+    description: str = ""
 
 
 @dataclass
@@ -130,6 +131,7 @@ def _parse_field(name: str, call: ast.Call) -> FieldInfo | RelationInfo | None:
             related_model=related_model,
             related_name=str(_eval_const(_get_keyword_value(call, "related_name")) or ""),
             nullable=_eval_const(_get_keyword_value(call, "null")) is True,
+            description=str(_eval_const(_get_keyword_value(call, "description")) or ""),
         )
 
     python_type = FIELD_TYPE_MAP.get(field_type, "str")

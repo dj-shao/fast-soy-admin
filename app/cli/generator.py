@@ -61,11 +61,11 @@ def _collect_constrained_types(models: list[ModelInfo]) -> tuple[set[str], bool]
 
 
 def _fk_schema_field(r: RelationInfo, *, optional: bool = False) -> str:
-    """外键在 schema 中表示为 xxx_id: int。"""
-    title = r.name.replace("_", " ")
+    """外键在 schema 中表示为 xxx_id: SqidId（项目统一约定，对外 ID 都是 sqid）。"""
+    title = r.description or r.name
     if optional or r.nullable:
-        return f'{r.name}_id: int | None = Field(None, title="{title}")'
-    return f'{r.name}_id: int = Field(title="{title}")'
+        return f'{r.name}_id: SqidId | None = Field(None, title="{title}")'
+    return f'{r.name}_id: SqidId = Field(title="{title}")'
 
 
 # ─── schemas.py ───
@@ -95,6 +95,9 @@ def gen_schemas(module_name: str, models: list[ModelInfo]) -> str:
         lines.append("")
 
     utils_symbols = {"PageQueryBase", "SchemaBase"} | enum_types | int_types
+    has_fk = any(r.relation_type in ("ForeignKeyField", "OneToOneField") for m in models for r in m.relations)
+    if has_fk:
+        utils_symbols.add("SqidId")
     utils_imports = ", ".join(sorted(utils_symbols))
 
     lines.extend([
