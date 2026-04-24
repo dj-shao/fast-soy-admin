@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from starlette.staticfiles import StaticFiles
+from tortoise.exceptions import OperationalError
 
 from app.core.autodiscover import discover_business_init_data, discover_business_routers
 from app.core.cache import refresh_all_cache
@@ -82,7 +83,23 @@ async def _run_init_data(_app: FastAPI) -> bool:
 
     if acquired:
         try:
-            await init_menus()
+            try:
+                await init_menus()
+            except OperationalError as e:
+                if "no such table" in str(e).lower() or "does not exist" in str(e).lower() or "doesn't exist" in str(e).lower():
+                    await redis.delete(_INIT_LOCK_KEY)
+                    sep = "=" * 60
+                    log.error(
+                        "\n" + sep + "\n"
+                        "数据库尚未初始化：检测到基础表缺失（如 `menus`）。\n"
+                        "首次启动请先执行以下命令初始化数据库：\n\n"
+                        "    make initdb            # 全新项目首次建表 + 基础数据\n\n"
+                        "若已有模型变更，请执行：\n\n"
+                        "    make mm                # makemigrations + migrate\n\n"
+                        "详见 CLAUDE.md / README 的 “数据库迁移” 一节。\n" + sep
+                    )
+                    raise SystemExit(1) from e
+                raise
             await refresh_api_list()
             await init_users()
 
