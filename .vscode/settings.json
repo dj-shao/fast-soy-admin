@@ -11,7 +11,7 @@
 
   "github.copilot.chat.commitMessageGeneration.instructions": [
     {
-      "text": "使用英文编写 commit message。格式：`type(scope): 摘要`。type 包括 feat、fix、refactor、docs。scope 为模块名如 fastapi、ws、nonebot、shared_lib。摘要简洁描述改动原因，不超过 50 字。如有必要，在正文中补充细节。"
+      "text": "ALWAYS write the commit message in English, even when the diff contains Chinese text, comments, or identifiers. Never output Chinese characters. Follow Conventional Commits: `type(scope): summary`. Types: feat, fix, refactor, docs, chore, ci, test, perf, style. Scope is the affected module, e.g. cli, system, business, web, deploy, menu, auth, hr, radar, dependency. Summary must be imperative mood, lowercase, under 50 chars, and describe the intent of the change. Add a body (wrapped at 72 chars) only when the reasoning is not obvious from the summary."
     }
   ],
   "python.terminal.activateEnvironment": false,
@@ -20,7 +20,7 @@
     "*.log": "ansi",
     "*.log.*": "ansi"
   },
-  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.typeCheckingMode": "on",
   // 禁用 VS Code 自带的 .env 解析器 —— 它不支持多行带引号的值
   // (如 TORTOISE_ORM),会把 `'{` 残片注入 os.environ 导致 pydantic-settings
   // 解析失败. pydantic-settings 在 Settings() 里用 python-dotenv 正确读 .env,

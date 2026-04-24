@@ -88,7 +88,7 @@ make down
 |---|---|---|
 | `api/` | URL 接线、鉴权依赖、调 service/controller 的薄包装，返回 `Success`/`Fail` | 业务规则、跨模型、事务 |
 | `services/` | 事务、多模型编排、Redis、状态机、审计、事件 | HTTP（Request/Response） |
-| `controllers/` | `XxxController(CRUDBase)`、`build_search`；单资源 CRUD | 多模型副作用 |
+| `controllers/` | `XxxController(CRUDBase)`、`build_search`；单模型 CRUD | 跨模型编排、事务、缓存、事件派发、外部 IO |
 | `models/` | 表字段、索引、关系、Mixin | 业务校验 |
 | `schemas/` | `XxxCreate/XxxUpdate/XxxSearch`，字段级校验 | 跨资源 |
 
