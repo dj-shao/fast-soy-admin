@@ -47,7 +47,9 @@ services:
     build:
       context: .
       dockerfile: deploy/app.Dockerfile
-    command: ["uv", "run", "deploy/reset_daemon.py"]
+    command: ["uv", "run", "--no-dev", "python", "deploy/reset_daemon.py"]
+    environment:
+      - PYTHONPATH=/opt/fast-soy-admin
     depends_on:
       - app
     restart: unless-stopped
