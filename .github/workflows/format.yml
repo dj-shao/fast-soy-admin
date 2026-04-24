@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   format:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'auto-format'
