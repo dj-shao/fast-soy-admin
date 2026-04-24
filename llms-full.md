@@ -1,12 +1,12 @@
 # FastSoyAdmin
 
-FastSoyAdmin 是一套开箱即用的全栈后台管理模板。
+FastSoyAdmin 是一套开箱即用的全栈后台管理模板。本文档是面向 LLM 的"单文件自包含上下文"，整合自 [在线文档站](https://sleep1223.github.io/fast-soy-admin-docs/)，用于快速建立项目全貌理解。
 
-- **后端**：FastAPI · Pydantic v2 · Tortoise ORM · Redis · Argon2 · PyJWT · Sqids · Granian
-- **前端**：Vue3 · Vite7 · TypeScript · Naive UI · Pinia · UnoCSS · Alova · Elegant Router
-- **基础设施**：Docker Compose (Nginx + FastAPI + Redis)、多 worker 启动锁、fastapi-guard 限流、内置 Radar 监控面板
+- **后端**：FastAPI · Pydantic v2 · Tortoise ORM · Redis · Argon2 · PyJWT · Sqids · Granian · fastapi-guard
+- **前端**：Vue3 · Vite7 · TypeScript · Naive UI · Pinia · UnoCSS · Alova · Elegant Router · vue-i18n
+- **基础设施**：Docker Compose（Nginx + FastAPI + Redis）· 多 worker 启动锁 · 内置 Radar 请求 / SQL / 异常 Dashboard
 
-相关链接：
+## 链接
 
 - 源码：https://github.com/sleep1223/fast-soy-admin
 - 在线预览：https://fast-soy-admin.sleep0.de/
@@ -17,9 +17,20 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板。
 
 ---
 
-## 1. 快速开始
+## 1. 分支
 
-### 1.1 环境要求
+| 分支 | 用途 |
+|---|---|
+| `main` | 默认分支，**带示例**（`app/business/hr/` 员工 / 部门 / 标签全套参考实现） |
+| `slim` | 纯净模板骨架，不含业务示例模块（**即将提供**） |
+
+未发布前如需无示例起步，直接删除 `app/business/hr/` 即可——`autodiscover` 下次启动自动跳过。
+
+---
+
+## 2. 快速开始
+
+### 2.1 环境要求
 
 | 工具 | 版本 |
 |---|---|
@@ -30,54 +41,64 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板。
 | pnpm | ≥ 10.5 |
 | make | 任意 |
 
-所有常用命令都封装在项目根目录的 `Makefile` 里。
+所有常用命令封装在根目录 `Makefile`，运行 `make` 或 `make help` 列出全部。
 
-### 1.2 Docker 部署（推荐）
+### 2.2 Docker 部署（推荐）
 
 ```bash
 git clone https://github.com/sleep1223/fast-soy-admin
 cd fast-soy-admin
-make up           # docker compose up -d
+make up                                                       # docker compose up -d
+docker compose exec app uv run python -m app.cli initdb       # 首次必须手动建表 + 基础数据
+docker compose restart app
 ```
 
 启动三个容器：Nginx (`:1880` 反代 + 静态资源)、FastAPI (`:9999`)、Redis (`:6379`)。
 
-### 1.3 本地开发
+**注意**：
+
+- 启动时**不会**自动迁移；全新库必须 `initdb`，后续模型变更走 `migrate`。
+- `initdb` 必须在容器里跑（容器使用 `.env.docker`，宿主机跑会写到宿主机 SQLite 文件）。
+- 默认 `docker-compose.yml` **未给 SQLite 挂卷**——`down` / `--build` 会丢。生产要么切外部数据库，要么挂卷到 `app_system.sqlite3`。
+
+### 2.3 本地开发
 
 ```bash
 make install-all  # 后端 uv sync + 前端 pnpm install
 make initdb       # 首次建表 + 基础数据（之后不再需要）
-make dev          # 并行启动后端 :9999 + 前端 :9527
+make dev          # 并行启动后端 :9999 + 前端 :9527，Ctrl+C 一起停
 ```
+
+分别启动：`make run`（仅后端）/ `make web-dev`（仅前端）。
 
 ---
 
-## 2. 顶层仓库结构
+## 3. 顶层仓库结构
 
 ```
 fast-soy-admin/
 ├── app/                       # 后端（FastAPI）
 │   ├── __init__.py            # App 工厂、lifespan、多 worker init 协调
-│   ├── core/                  # 框架基础设施（无业务）
-│   ├── system/                # 内置系统模块（auth / user / role / menu / api / dict）
+│   ├── core/                  # 框架基础设施（不含业务）
+│   ├── system/                # 内置系统模块（auth / user / role / menu / api / dict / radar）
 │   ├── business/              # 业务模块（autodiscover 自动加载）
 │   │   └── hr/                #   参考实现：员工 / 部门 / 标签
 │   ├── cli/                   # 代码生成器（init / gen / gen-web / initdb）
 │   └── utils/                 # 业务开发者的统一 import 入口
 ├── web/                       # 前端（Vue3 + Vite）
-│   └── src/
-│       ├── views/             # 页面组件（Elegant Router 源）
-│       ├── service/api/       # Alova API 封装
-│       ├── typings/api/       # TS 类型声明
-│       ├── store/modules/     # Pinia 状态管理
-│       ├── router/            # Elegant Router + 守卫
-│       ├── layouts/           # 基础布局
-│       ├── locales/           # vue-i18n（zh-CN / en-US）
-│       ├── hooks/             # 组合式函数
-│       └── theme/             # 主题设置
-├── web/packages/              # 前端内部子包（alova / axios / hooks / utils / color / uno-preset）
+│   ├── src/
+│   │   ├── views/             # 页面组件（Elegant Router 源）
+│   │   ├── service/api/       # Alova API 封装
+│   │   ├── typings/api/       # TS 类型声明
+│   │   ├── store/modules/     # Pinia 状态管理
+│   │   ├── router/            # Elegant Router + 守卫
+│   │   ├── layouts/           # 基础布局
+│   │   ├── locales/           # vue-i18n（zh-CN / en-US）
+│   │   ├── hooks/             # 组合式函数
+│   │   └── theme/             # 主题设置
+│   └── packages/              # 内部子包（alova / axios / hooks / utils / color / uno-preset）
 ├── deploy/                    # Docker 与 Nginx 配置
-├── migrations/                # Tortoise ORM 迁移文件（gitignored，按 DB app 分目录）
+├── migrations/                # Tortoise ORM 迁移文件（按 DB app 分目录）
 ├── tests/                     # 后端 pytest
 ├── Makefile                   # 所有命令的统一入口
 └── docker-compose.yml
@@ -85,153 +106,168 @@ fast-soy-admin/
 
 ---
 
-## 3. 后端架构
+## 4. 后端架构
 
-### 3.1 包边界与依赖方向
+### 4.1 包边界与依赖方向
 
 | 包 | 职责 | 依赖方向 |
 |---|---|---|
 | `app/core/` | 框架基础设施 | 不依赖 system / business |
 | `app/system/` | 内置系统模块（认证、RBAC、字典、监控） | 仅依赖 `app/core/` |
-| `app/business/<x>/` | 业务模块 | 依赖 `app/utils`；**不得依赖兄弟业务模块**、不得反向依赖 `app.system.*`（少数 system 显式暴露的 service 除外，如 `ensure_menu`） |
+| `app/business/<x>/` | 业务模块 | 依赖 `app/utils`；**不得依赖兄弟业务模块**，不得反向依赖 `app.system.*`（少数显式暴露的 service 除外，如 `ensure_menu` / `ensure_role`） |
 | `app/utils/` | 业务开发者对外稳定入口 | 重新导出 `app/core/*` 与少量 `app/system/*` 符号 |
 | `app/cli/` | 代码生成器 | 离线使用，不进入运行时 |
 
-跨业务模块联动通过[事件总线](#_612-事件总线)解耦。
+跨业务模块联动通过[事件总线](#101-事件总线)解耦。
 
-### 3.2 分层
+### 4.2 分层
 
 ```
 HTTP Request
-    ↓
-api/           FastAPI 路由：薄 HTTP 适配器（鉴权依赖 + 调 service/controller + Success/Fail）
-    ↓
-services/      多模型编排、事务、缓存、状态机、审计、跨模块事件
-    ↓
-controllers/   CRUDBase 子类：单资源 CRUD 与 build_search
-    ↓
+    │
+    ▼
+api/        ← FastAPI 路由：薄 HTTP 适配器，校验 + 调 service/controller + Success/Fail
+    │
+    ▼
+services/   ← 多模型编排、事务、缓存、审计、事件、状态机
+    │
+    ▼
+controllers/ ← CRUDBase 子类，单资源 CRUD + build_search
+    │
+    ▼
 models / schemas
+    Tortoise ORM 模型 + Pydantic Schema
 ```
 
 | 层 | 写什么 | 不写什么 |
 |---|---|---|
-| `api/` | URL 接线、依赖（鉴权）、调 service/controller 的薄包装 | 业务规则、跨模型、事务 |
-| `services/` | 事务、跨模型、Redis、状态机、审计、事件 | HTTP（Request/Response） |
-| `controllers/` | `XxxController(CRUDBase)`、`build_search` | 多模型副作用 |
+| `api/` | URL 接线、鉴权依赖、调 service/controller 的薄包装，返回 `Success` / `Fail` | 业务规则、跨模型、事务 |
+| `services/` | 事务、多模型、Redis、状态机、审计、事件 | HTTP（Request / Response） |
+| `controllers/` | `XxxController(CRUDBase)`、`build_search`；单模型 CRUD | 跨模型编排、事务、缓存、事件、外部 IO |
 | `models/` | 表字段、索引、关系、Mixin | 业务校验 |
-| `schemas/` | `XxxCreate / XxxUpdate / XxxSearch`，字段级校验 | 跨资源 |
+| `schemas/` | `XxxCreate` / `XxxUpdate` / `XxxSearch`，字段级校验 | 跨资源 |
 
-### 3.3 启动生命周期
+### 4.3 请求生命周期
+
+入站中间件（`app/core/middlewares.py` + `make_middlewares()`）：
+
+1. `CORSMiddleware`
+2. `PrettyErrorsMiddleware` — 异常输出美化
+3. `BackgroundTaskMiddleware` — 把 FastAPI `BackgroundTasks` 注入 `CTX_BG_TASKS`
+4. `RequestIDMiddleware` — 注入 `X-Request-ID` 到响应头与 `CTX_X_REQUEST_ID`
+5. `RadarMiddleware`（条件启用）— 捕获请求 / SQL / 异常到 Radar Dashboard
+6. `fastapi-guard`（条件启用）— 限流 / 自动封禁
+
+路由分发：
+
+- `/api/v1/auth/*` — 认证（公开）
+- `/api/v1/route/*` — 路由元数据（constant-routes / user-routes）
+- `/api/v1/system-manage/*` — 系统模块（用户 / 角色 / 菜单 / API / 字典）
+- `/api/v1/business/<module>/*` — 业务模块（autodiscover 自动挂载）
+
+依赖注入：
+
+- `DependAuth` — JWT 解码 → 校验 token 版本号 → 加载用户与角色 / 按钮权限到 ContextVars
+- `DependPermission` — 在 `DependAuth` 之上，按 `(method, path)` 精确比对 `role.apis`
+- `require_buttons(...)` / `require_roles(...)` — 工厂依赖，按需挂在路由上
+
+响应：一律返回 `Success` / `SuccessExtra` / `Fail`（`JSONResponse` 子类，自动 camelCase）。
+
+### 4.4 启动生命周期
 
 ```
 create_app()
-  ├─ register_db(app)                  # Tortoise.init(config=TORTOISE_ORM)
-  ├─ register_exceptions(app)          # BizError / DoesNotExist / IntegrityError / ValidationError
-  ├─ register_routers(app, prefix="/api")
-  ├─ discover_business_routers()       # /api/v1/business/<name>/*
-  └─ setup_radar(app)
+  ├─ register_db(app)                # Tortoise.init(config=TORTOISE_ORM)
+  ├─ register_exceptions(app)        # BizError / DoesNotExist / IntegrityError / ValidationError
+  ├─ register_routers(app, prefix="/api")          # 系统模块
+  ├─ discover_business_routers()     # /api/v1/business/<name>/...
+  └─ setup_radar(app)                # 可选
 
 lifespan(app)
   ├─ init_redis() → app.state.redis
-  ├─ FastAPICache.init(RedisBackend(redis))
-  ├─ delete app:init_lock / app:init_done
-  ├─ _run_init_data(app):              # 多 worker 中仅 leader 执行
-  │    ├─ init_menus()                 # 系统菜单种子
-  │    ├─ refresh_api_list()           # FastAPI 路由 ↔ Api 表全量对账
-  │    ├─ init_users()                 # 系统角色 + 默认账号 + 字典
-  │    ├─ for each business init():    # 业务模块 init_data.init()
-  │    └─ refresh_all_cache()          # 角色权限 / 常量路由刷 Redis
-  ├─ startup_radar()
+  ├─ FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+  ├─ delete _INIT_LOCK_KEY / _INIT_DONE_KEY
+  ├─ _run_init_data(app)             # 多 worker 中仅 leader 执行
+  │    ├─ init_menus()               # 系统菜单种子（仅在 Menu 表为空时插入）
+  │    ├─ refresh_api_list()         # FastAPI 路由 ↔ Api 表全量对账
+  │    ├─ init_users()               # 系统角色 + 默认账号 + 字典
+  │    ├─ for each business init():  # 业务模块 init_data.init()
+  │    └─ refresh_all_cache()        # 角色权限 / 常量路由刷到 Redis
+  ├─ startup_radar()                 # 可选
   └─ yield
        ↓ shutdown
   └─ close_redis()
 ```
 
-多 worker 情况：Leader 通过 `SET app:init_lock 1 NX EX 120` 抢占，成功后执行完整 init，再 `SET app:init_done 1 EX 120`；非 leader 轮询 `app:init_done`，最长等 150s。每次进程启动前 leader 先 `DEL` 锁，因此每次重启都会真的跑一次 init。
+### 4.5 多 worker 启动锁
 
-### 3.4 中间件栈
+生产环境通常 4 个 granian worker。启动时通过 Redis 分布式锁 `app:init_lock` 协调：
 
-按顺序：`CORSMiddleware` → `PrettyErrorsMiddleware` → `BackgroundTaskMiddleware` → `RequestIDMiddleware` → `RadarMiddleware`（可选）→ `fastapi-guard`（可选）。
+- Leader（`SET app:init_lock 1 NX EX 120` 成功者）执行完整 init，然后 `SET app:init_done 1 EX 120`
+- 其他 worker 轮询 `app:init_done`，最长等 150s 后即使没等到也启动
+- 每次进程启动前 leader 先 `DEL` 锁，因此每次重启都会真的跑一次 init
 
-- `RequestIDMiddleware` 注入 `X-Request-ID` 响应头与 `CTX_X_REQUEST_ID`
-- `BackgroundTaskMiddleware` 把 FastAPI 的 `BackgroundTasks` 注入 `CTX_BG_TASKS`
-- `PrettyErrorsMiddleware` 美化异常输出
-- Radar 捕获请求 / SQL / 异常到内置 Dashboard（`/manage/radar/*`）
+### 4.6 多数据库连接
 
-### 3.5 路由前缀
+- 默认所有模型挂在主连接 `conn_system`
+- 业务模块在自己的 `config.py` 声明独立 `DB_URL` 时，autodiscover 会注册独立连接 `conn_<biz>` 与独立 app
+- 跨模型事务用 `get_db_conn(Model)` 取连接名，**不要硬编码** `"conn_system"`
 
-| 前缀 | 用途 |
-|---|---|
-| `/api/v1/auth` | 认证（公开） |
-| `/api/v1/route` | 前端拉常量路由 / 用户路由 |
-| `/api/v1/system-manage/*` | 系统模块（用户 / 角色 / 菜单 / API / 字典） |
-| `/api/v1/business/<module>/*` | 业务模块（autodiscover 自动挂载） |
-
----
-
-## 4. RBAC 与认证
-
-### 4.1 数据模型
+### 4.7 RBAC 数据模型
 
 ```
 User ←M2M→ Role ←M2M→ Menu      (菜单权限：决定前端可见的路由)
                 ←M2M→ Button    (按钮权限：决定页面内可执行的操作)
                 ←M2M→ Api       (接口权限：决定可调用的后端接口)
                 FK    Menu      (角色首页 by_role_home)
-              field   data_scope (行级数据范围: all / department / self / custom)
+              field   data_scope (行级数据范围：all / department / self / custom)
 ```
 
-- 超级管理员 `R_SUPER` 跳过所有权限校验，自动挂所有非 constant 菜单与所有按钮
-- 按钮编码约定 `B_<MODULE>_<RESOURCE>_<ACTION>`，角色编码 `R_<UPPER>`
-- 路由名 `route_name` 是前端 vue-router 的 `name`，也是后端 `Menu.route_name` 唯一键——改名意味着所有引用它的角色 seed 都要改
+- 超级管理员 `R_SUPER`（`app.core.constants.SUPER_ADMIN_ROLE`）跳过所有权限校验
+- API 权限由 `refresh_api_list()` 自动维护（按 `(method, path)` 全量对账）
+- 菜单 / 按钮由各模块 `init_data.py` 通过 `ensure_menu()` 声明，可选 `reconcile_menu_subtree()` 做 IaC 对账
+- 按钮编码约定 `B_<MODULE>_<RESOURCE>_<ACTION>`（如 `B_HR_EMP_CREATE`）
 
-### 4.2 JWT
+### 4.8 行级数据权限（data_scope）
 
-HS256，payload 携带 `userId / userName / tokenType / tokenVersion / impersonatorId`。
+涉及行级权限的列表接口必须在 `@crud.override("list")` 内用 `build_scope_filter(scope, user_id, department_id, ...)` 拼查询。业务角色种子**必须显式声明** `data_scope`（`all` / `department` / `self` / `custom`），不要依赖默认（否则默认 `all` = 全可见）。
 
-- access token 默认 12h，refresh token 默认 7d
-- Redis 维护 `token_version:{uid}`，修改密码 / 超管模拟登录时递增，老 token 失效（码 `2106`）
-- Token 过期（`2103`）由前端自动走 `/api/v1/auth/refresh-token` 刷新并重放原请求
-- 非法 / 缺失 / 解码失败（`2100` / `2101`）直接登出
+### 4.9 缓存模型
 
-### 4.3 鉴权依赖
-
-| 依赖 | 用途 | 失败码 |
-|---|---|---|
-| `DependAuth` | 解 JWT + 校验 token 版本 + 加载用户/角色/按钮到 ContextVars | `21xx` |
-| `DependPermission` | 在 `DependAuth` 之上，按 `(method, path)` 比对 `role.apis` | `2200` / `2201` |
-| `require_buttons("B_X", ...)` | 任一通过即可 | `2203` |
-| `require_buttons(..., require_all=True)` | 全部通过 | `2202` |
-| `require_roles("R_X", ...)` | 任一通过即可 | `2205` |
-| `require_roles(..., require_all=True)` | 全部通过 | `2204` |
-
-上下文工具：`get_current_user()` / `get_current_user_id()` / `is_super_admin()` / `has_role_code()` / `has_button_code()`，均从 `app.utils` 导出。
-
-### 4.4 行级 data_scope
-
-`Role.data_scope` 为 `all / department / self / custom`。用户有多个角色时取最宽松的 scope（`all > department > self > custom`）。列表类接口使用 `build_scope_filter(scope, user_id=..., department_id=...)` 返回 `Q` 对象参与查询。
-
-> **强约定**：涉及行级权限的列表接口必须 `@crud.override("list")` 拼 `build_scope_filter`，不要在模型层默认。业务角色种子**必须显式声明** `data_scope`，避免误用默认的 `all`。
+| 数据 | Redis Key | TTL | 谁写 |
+|---|---|---|---|
+| 常量路由 | `constant_routes` | 永久 | `refresh_all_cache` |
+| 角色菜单 ID | `role:{code}:menus` | 永久 | `load_role_permissions` |
+| 角色 API | `role:{code}:apis` | 永久 | 同上 |
+| 角色按钮 | `role:{code}:buttons` | 永久 | 同上 |
+| 角色数据范围 | `role:{code}:data_scope` | 永久 | 同上 |
+| 用户角色 | `user:{uid}:roles` | 永久 | `load_user_roles` |
+| 用户首页 | `user:{uid}:role_home` | 永久 | 同上 |
+| Token 版本 | `token_version:{uid}` | 永久 | 修改密码 / 强制下线 |
+| 业务自有缓存 | 按 `<module>_<resource>:<scope>` 自定义 | 模块自定 | 模块自定 |
 
 ---
 
-## 5. API 约定（强制规范）
+## 5. API 约定
 
-### 5.1 响应格式
+### 5.1 路由前缀
 
-所有成功响应：
+| 前缀 | 用途 |
+|---|---|
+| `/api/v1/auth` | 认证（公开） |
+| `/api/v1/route` | 路由（constant-routes / user-routes） |
+| `/api/v1/system-manage/*` | 系统模块（用户 / 角色 / 菜单 / API / 字典） |
+| `/api/v1/business/<module>/*` | 业务模块 |
+
+### 5.2 响应格式
 
 ```json
 { "code": "0000", "msg": "OK", "data": { ... } }
 ```
 
-HTTP status 恒为 200，业务结果由 `code` 字段承载。
+HTTP status 恒 200。字段命名一律 **camelCase**——`SchemaBase` 的 `alias_generator=to_camel_case` 自动处理；`Model.to_dict()` 同样输出 camelCase。**禁止**返回裸 dict、**禁止**手工拼 snake_case。
 
-- ✅ 必须返回 `Success` / `SuccessExtra` / `Fail`（来自 `app.utils`）
-- ❌ 不要返回裸 dict、`JSONResponse(...)`、`{"code": "0000", ...}` 字面量
-- ❌ 不要手拼 snake_case——`SchemaBase` 与 `Model.to_dict()` 自动 camelCase
-
-### 5.2 路径与方法
+### 5.3 路径与方法
 
 | 操作 | 方法 + 路径 | Body / Params |
 |---|---|---|
@@ -242,77 +278,53 @@ HTTP status 恒为 200，业务结果由 `code` 字段承载。
 | 单条删除 | `DELETE /resources/{id}` | — |
 | 批量删除 | `DELETE /resources` | Body: `CommonIds`（`{ids: [...]}`） |
 | 子资源 | `GET/PATCH /resources/{id}/sub` | — |
-| 派生查询 | `GET /resources/tree` / `.../options` | — |
+| 派生查询 | `GET /resources/tree` / `/options` / `/pages` | — |
 | 实例动作 | `POST /resources/{id}/action-name` | 视情况 |
 | 集合动作 | `POST /resources/batch-offline` 等 | Body |
 
 约束：
 
-- 资源名一律 **复数**
-- 多词路径一律 **kebab-case**（`/batch-offline`、`/user-routes`）
-- **不要**带尾斜杠
-- 搜索一律 `POST /search`，不要 `GET ?...=...`
-
-### 5.3 字段命名
-
-- 请求 body / query 一律 **camelCase**（Pydantic `validate_by_name=True` 兼容 snake_case，但前端始终发 camelCase）
-- 响应 `data` 一律 **camelCase**（`schema.model_dump(by_alias=True)` 或 `model.to_dict()`）
+- **不要**带尾斜杠（`/users` ✅，`/users/` ❌）
+- 多词路径 **kebab-case**（`/batch-offline`、`/constant-routes`、`/user-routes`）
+- 资源名 **复数**（`/users`、`/roles`、`/departments`）
+- "搜索"统一用 `POST /resources/search`，不要 `GET ?...=...`
 
 ### 5.4 分页
 
-继承 `PageQueryBase`：
+请求体继承 `PageQueryBase`：
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | `current` | `1` | 页码（≥ 1） |
-| `size` | `10` | 每页数（1–1000） |
-| `orderBy` | `null` | 排序字段列表，`-` 前缀降序，如 `["-createdAt", "id"]` |
+| `size` | `10` | 每页数量（1–1000） |
+| `orderBy` | `null` | 排序字段列表，`-` 前缀降序，例 `["-createdAt", "id"]` |
 
-响应：
+响应体：
 
 ```json
-{ "code": "0000", "data": { "records": [...], "total": 42, "current": 1, "size": 10 } }
+{ "code": "0000", "msg": "OK", "data": { "records": [...], "total": 42, "current": 1, "size": 10 } }
 ```
 
 ### 5.5 资源 ID 一律 sqid
 
-对外 ID 都是 sqid 字符串（如 `Yc7vN3kE`），不是自增 int。Pydantic 中用 `SqidId`，FastAPI 路径参数用 `SqidPath`：
+对外 ID 都是 sqid 字符串（如 `Yc7vN3kE`），**不是**自增 int。Pydantic 用 `SqidId`，FastAPI 路径参数用 `SqidPath`：
 
 ```python
 from app.utils import SqidId, SqidPath, SchemaBase
 
 class DepartmentUpdate(SchemaBase):
-    parent_id: SqidId | None = None
+    parent_id: SqidId | None = None          # body 字段
 
 @router.get("/departments/{item_id}")
-async def get_dept(item_id: SqidPath):
+async def get_dept(item_id: SqidPath):       # 路径参数
     ...
 ```
 
-Sqids 的字母表从 `SECRET_KEY` 派生。
+- `SqidId`：校验时解码成 int，序列化时再编码回 sqid
+- `SqidPath`：只解码、不参与序列化输出
+- sqid 字母表由 `SECRET_KEY` 派生——轮换 SECRET_KEY 会使所有对外 sqid 链接失效
 
-### 5.6 响应封装
-
-| 类 | 用途 | 场景 |
-|---|---|---|
-| `Success(data=...)` | 单条 / 无分页 | get / create / update |
-| `SuccessExtra(data={"records": [...]}, total, current, size)` | 分页 | list / search |
-| `Fail(code=Code.X, msg="...")` | 业务失败 | 规则不通过 |
-| `Custom(code, status_code, msg, data, **kwargs)` | 极少数自定义 status_code 场景 | — |
-
-OpenAPI 需要准确响应模型时在路由上加 `response_model=ResponseModel[UserOut]` 或 `PageResponseModel[UserOut]`。
-
----
-
-## 6. 核心机制
-
-### 6.1 CRUDBase
-
-单资源 CRUD 的入口，放在 `controllers/`。提供 `list / get / create / update / remove / build_search`，自动从 `CTX_USER_ID` 填 `created_by / updated_by`。不做跨资源副作用——多模型编排走 service 层。
-
-### 6.2 CRUDRouter
-
-6 条标准路由的工厂，一次声明：
+### 5.6 CRUDRouter — 不要手写样板路由
 
 ```python
 from app.utils import CRUDRouter, SearchFieldConfig, require_buttons
@@ -324,8 +336,8 @@ dept_crud = CRUDRouter(
     update_schema=DepartmentUpdate,
     list_schema=DepartmentSearch,
     search_fields=SearchFieldConfig(
-        contains_fields=["name", "code"],
-        exact_fields=["status"],
+        contains_fields=["name", "code"],   # 模糊匹配
+        exact_fields=["status"],            # 精确匹配
     ),
     summary_prefix="部门",
     soft_delete=True,
@@ -337,289 +349,396 @@ dept_crud = CRUDRouter(
         "batch_delete": [require_buttons("B_HR_DEPT_DELETE")],
     },
 )
+
+@dept_crud.override("list")                 # 自定义 list
+async def _list(obj_in: DepartmentSearch):
+    q = department_controller.build_search(obj_in, contains_fields=["name"])
+    total, items = await department_controller.list(
+        page=obj_in.current, page_size=obj_in.size, search=q, order=["-id"],
+    )
+    return SuccessExtra(
+        data={"records": [await i.to_dict() for i in items]},
+        total=total, current=obj_in.current, size=obj_in.size,
+    )
+
 router = dept_crud.router
 ```
 
-- 自定义某条路由用 `@crud.override("list")`（key 可选 `list / get / create / update / remove / batch_remove`）；不要在 router 上重新声明同路径——`_OrderedRouter` 会把静态路径排在动态路径前面以避免遮蔽（`GET /resources/{id}` vs `GET /resources/tree`），绕过它会出错
-- 标准 6 路由之外的端点直接挂在 `crud.router` 上
-- 按钮权限通过 `action_dependencies` 挂载，对 `@override` 的路由同样生效
+- 可覆盖的 key：`list` / `get` / `create` / `update` / `remove` / `batch_remove`
+- **不要**在 router 上重新声明同路径（会被 `_OrderedRouter` 排序后遮蔽）
+- `_OrderedRouter` 每次 `add_api_route` 后自动把不含 `{...}` 的路径排到前面，避免 `GET /resources/{id}` 遮蔽 `GET /resources/tree`
 
-### 6.3 Schema 基类
+标准 CRUD 之外的接口（如 `POST /warehouses/batch-offline`）直接写在 `router` 上，**不要**塞进 `CRUDRouter`。
 
-- `SchemaBase`：`alias_generator=to_camel_case`、`populate_by_name=True`；自动 snake_case ↔ camelCase
-- `PageQueryBase`：分页搜索基类（`current` / `size` / `orderBy`）
-- `CommonIds`：`{ids: [...]}` 批量删除 body
-- `OfflineByRoleRequest`：按角色下线用户的 body
-- `make_optional(XxxCreate, "XxxUpdate")`：从 Create 派生 Update，把所有字段改成 `Optional`，避免冗余字段
-- Schema 校验器中要返回业务码时用 `SchemaValidationError(code, msg)`（**不要** `ValueError`——Pydantic 会捕获）
-- 字段约束类型：`Int16 / Int32 / Int64`
+### 5.7 鉴权依赖
 
-### 6.4 模型 Mixin
-
-| Mixin | 字段 |
+| 依赖 | 用途 |
 |---|---|
-| `BaseModel` | `id`，`to_dict()`（自动 sqid 编码、枚举/datetime 序列化） |
-| `AuditMixin` | `created_at / updated_at / created_by / updated_by`（从 `CTX_USER_ID` 自动写入） |
-| `TreeMixin` | `parent_id`（`0` 为根） |
-| `SoftDeleteMixin` | `deleted_at`，默认 QuerySet 过滤掉已删除 |
+| `DependAuth` | 仅 JWT 校验（登录态） |
+| `DependPermission` | 在 `DependAuth` 之上按 `(method, path)` 校验 `role.apis`（业务接口默认挂在 router 上） |
+| `require_buttons("B_X", ..., require_all=False)` | 任一通过（码 `2203`） |
+| `require_buttons(..., require_all=True)` | 全部通过（码 `2202`） |
+| `require_roles(...)` | 同上但针对角色（码 `2204` / `2205`） |
 
-约束：
+`R_SUPER` 自动跳过所有权限校验。
 
-- 模型文件头加 `# pyright: reportIncompatibleVariableOverride=false`（Tortoise + basedpyright 已知误报）
-- 字段加 `description="..."`（CLI 生成 schema 时会截断到第一个句号前作为 i18n 中文名）
-- 类的 docstring 写中文资源名（`"""部门"""`），作为 API summary 前缀
-- `Meta.table` 用 `biz_<module>_<entity>` 前缀；系统模型在 `app/system/models/` 下用语义化表名
+### 5.8 响应封装
 
-### 6.5 app.utils 导出面
+| 类 | 用途 | 典型场景 |
+|---|---|---|
+| `Success(data=...)` | 单条 / 无分页 | get / create / update |
+| `SuccessExtra(data={"records": [...]}, total, current, size)` | 分页 | list / search |
+| `Fail(code=Code.X, msg="...")` | 业务失败 | 规则不通过 |
+| `Custom(code, status_code, msg, data, **kwargs)` | 任意 | 极少数自定义 status_code 场景 |
 
-业务模块统一从 `app.utils` 导入：
+OpenAPI 生成准确响应模型：在路由上加 `response_model=ResponseModel[UserOut]` 或 `PageResponseModel[UserOut]`。
+
+### 5.9 关键端点速查
+
+#### 认证（`/api/v1/auth`，公开）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/login` | 用户名密码登录 |
+| POST | `/captcha` | 发送手机验证码 |
+| POST | `/code-login` | 验证码登录 |
+| POST | `/register` | 注册（默认角色 `R_USER`） |
+| POST | `/refresh-token` | 刷新 access token |
+| GET | `/user-info` | 当前用户信息 + 角色 + 按钮（`DependAuth`） |
+| PATCH | `/password` | 修改密码（`DependAuth`，会递增 token 版本） |
+| POST | `/impersonate/{user_id}` | 超级管理员模拟登录（`DependPermission` + 超管校验） |
+
+#### 路由（`/api/v1/route`）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/constant-routes` | 公共路由（登录页 / 错误页等，从 Redis） |
+| GET | `/user-routes` | 当前用户可见的菜单树（`DependAuth`） |
+| GET | `/exists?name=xxx` | 校验路由名是否存在（`DependAuth`） |
+
+#### 系统管理（`/api/v1/system-manage`，全部 `DependPermission`）
+
+每个资源都遵循标准 6 路由：
+
+| 资源 | 前缀 | 备注 |
+|---|---|---|
+| 用户 | `/users` | `create / update` 走 `@override` 注入密码哈希 + 角色关联 |
+| 角色 | `/roles` | 含 `GET /roles/{id}/menus`、`PATCH /roles/{id}/menus` 等子资源 |
+| 菜单 | `/menus` | 含 `GET /menus/tree`、`GET /menus/pages` |
+| API | `/apis` | 含 `POST /apis/refresh`（手动触发对账） |
+| 字典 | `/dictionaries` | 含 `GET /dictionaries/{type}/options`（带 5 分钟 Redis 缓存） |
+
+---
+
+## 6. 响应码
+
+所有接口（含 200 / 4xx / 5xx）统一返回 `{"code": "xxxx", "msg": "...", "data": ...}`，HTTP 状态码恒为 200，业务结果由 `code` 字段承载。源码：`app/core/code.py`。
+
+### 码段划分
+
+| 码段 | 含义 |
+|---|---|
+| `0000` | 成功 |
+| `1000–1999` | 系统内部错误（异常捕获、入参校验失败） |
+| `2000–2999` | 业务逻辑错误（认证、授权、资源冲突、业务失败） |
+| `3000–3999` | 框架预留 |
+| `4000–9999` | 项目自定义业务码（框架不使用） |
+
+### 1xxx — 系统内部错误
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `1000` | `INTERNAL_ERROR` | 通用 / 未处理异常 |
+| `1100` | `INTEGRITY_ERROR` | 唯一键 / 外键约束冲突 |
+| `1101` | `NOT_FOUND` | 记录不存在（`DoesNotExist`） |
+| `1200` | `REQUEST_VALIDATION` | 请求参数 / 请求体校验失败（FastAPI 层） |
+| `1201` | `RESPONSE_VALIDATION` | 响应序列化失败 |
+
+`1200` 的 `data.errors` 每条形如 `{field, message, type}`，由 `_format_validation_error` 把 Pydantic v2 的英文错误翻译成中文。
+
+### 21xx — 认证（前端有特殊处理）
+
+| 码 | 常量 | 说明 | 前端行为 |
+|---|---|---|---|
+| `2100` | `INVALID_TOKEN` | Token 缺失 / 解码失败 / 格式无效 | 跳转登录 |
+| `2101` | `INVALID_SESSION` | Token 类型错误 / 用户不存在 | 跳转登录 |
+| `2102` | `ACCOUNT_DISABLED` | 用户账号已禁用 | 弹窗后登出 |
+| `2103` | `TOKEN_EXPIRED` | access token 已过期 | 自动刷新 token |
+| `2104` | `REFRESH_TOKEN_MISSING` | 刷新令牌缺失 | — |
+| `2105` | `NOT_REFRESH_TOKEN` | 传入的不是刷新令牌 | — |
+| `2106` | `SESSION_INVALIDATED` | `token_version` 已递增，旧 token 失效 | 跳转登录 |
+
+前端 `.env`：`VITE_SERVICE_LOGOUT_CODES=2100,2101`、`VITE_SERVICE_MODAL_LOGOUT_CODES=2102`、`VITE_SERVICE_EXPIRED_TOKEN_CODES=2103`。
+
+### 22xx — 授权
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2200` | `API_DISABLED` | 接口被管理员禁用 |
+| `2201` | `PERMISSION_DENIED` | RBAC 接口权限不足 |
+| `2202` | `MISSING_BUTTON_PERMISSION` | `require_buttons(..., require_all=True)` 缺指定按钮 |
+| `2203` | `NEED_ANY_BUTTON_PERMISSION` | `require_buttons(...)` 任一按钮都不持有 |
+| `2204` | `MISSING_ROLE` | `require_roles(..., require_all=True)` 缺指定角色 |
+| `2205` | `NEED_ANY_ROLE` | `require_roles(...)` 任一角色都不持有 |
+| `2206` | `SUPER_ADMIN_ONLY` | 仅超级管理员可操作 |
+| `2207` | `USER_NO_ROLE` | 用户未绑定任何角色 |
+
+### 23xx — 资源冲突
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2300` | `DUPLICATE_RESOURCE` | 通用资源重复（兜底） |
+| `2301` | `DUPLICATE_ROLE_CODE` | 角色编码已存在 |
+| `2302` | `DUPLICATE_USER_EMAIL` | 邮箱已注册 |
+| `2303` | `DUPLICATE_USER_PHONE` | 手机号已注册 |
+| `2304` | `DUPLICATE_USER_NAME` | 用户名已存在 |
+| `2305` | `DUPLICATE_MENU_ROUTE` | 菜单路由路径已存在 |
+
+### 24xx — 通用业务失败
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2400` | `FAIL` | 未归类失败（**尽量避免**，新增场景请加专属码） |
+| `2401` | `WRONG_CREDENTIALS` | 用户名或密码错误 |
+| `2402` | `CAPTCHA_INVALID` | 验证码错误或已过期 |
+| `2403` | `CAPTCHA_SEND_FAILED` | 验证码发送失败 |
+| `2404` | `PHONE_NOT_REGISTERED` | 手机号未注册 |
+| `2405` | `OLD_PASSWORD_WRONG` | 修改密码时原密码错误 |
+| `2406` | `TARGET_USER_NOT_FOUND` | 操作目标用户不存在（如模拟登录） |
+
+### 25xx — 限流 / 安全
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2500` | `RATE_LIMITED` | 请求过于频繁 |
+| `2501` | `IP_BANNED` | IP 已被临时封禁 |
+| `2502` | `ACCESS_DENIED` | 被安全策略拦截 |
+
+### 26xx — Schema 必填校验
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2600` | `PARAM_REQUIRED` | 通用必填兜底 |
+| `2601` | `USERNAME_REQUIRED` | 用户名不能为空 |
+| `2602` | `PASSWORD_REQUIRED` | 密码不能为空 |
+| `2603` | `USER_ROLE_REQUIRED` | 用户至少需要一个角色 |
+| `2604–2608` | `USER_EMAIL_REQUIRED` / `ROLE_NAME_REQUIRED` / `ROLE_CODE_REQUIRED` / `ROUTE_NAME_REQUIRED` / `ROUTE_PATH_REQUIRED` | 对应字段必填 |
+
+### 27xx — HR 业务（业务模块码示例）
+
+| 码 | 常量 | 说明 |
+|---|---|---|
+| `2700` | `HR_DEPARTMENT_REQUIRED` | 超级管理员创建员工需指定部门 |
+| `2701` | `HR_MANAGER_REQUIRED` | 仅部门主管可创建员工 |
+| `2702` | `HR_CREATE_FORBIDDEN` | 无权限创建员工 |
+| `2703` | `HR_TAGS_EXCEED_LIMIT` | 员工标签数量超出上限 |
+| `2704` | `HR_EMPLOYEE_NOT_IN_DEPT` | 该员工不在当前主管部门中 |
+| `2705` | `HR_USER_NOT_EMPLOYEE` | 当前用户未关联员工信息 |
+| `2706` | `HR_MANAGER_ONLY` | 仅部门主管可执行此操作 |
+| `2707` | `HR_INVALID_TRANSITION` | 不允许的状态流转 |
+
+> 业务模块约定：在 `app/core/code.py` 末尾分配本模块的码段（如 `28xx`、`29xx`），**不要**反复 `Code.FAIL`。每个失败场景一个唯一码。
+
+### 抛出方式
 
 ```python
-from app.utils import (
-    # ORM
-    BaseModel, AuditMixin, TreeMixin, SoftDeleteMixin,
-    StatusType, IntEnum, StrEnum,
-    # Schema / 响应
-    SchemaBase, PageQueryBase,
-    Success, Fail, SuccessExtra,
-    CommonIds, OfflineByRoleRequest,
-    ResponseModel, PageResponseModel,
-    Custom, make_optional,
-    # CRUD
-    CRUDBase, get_db_conn,
-    CRUDRouter, SearchFieldConfig,
-    # 业务码 & 异常
-    Code, BizError, SchemaValidationError,
-    # 鉴权
-    DependAuth, DependPermission,
-    require_buttons, require_roles,
-    CTX_USER_ID,
-    get_current_user, get_current_user_id,
-    is_super_admin, has_role_code, has_button_code,
-    # 数据权限
-    DataScopeType, build_scope_filter,
-    # 事件 & 状态机
-    emit, on, StateMachine,
-    # Sqids
-    encode_id, decode_id, SqidId, SqidPath,
-    Int16, Int32, Int64,
-    # 配置 / 常量 / 日志 / 监控
-    APP_SETTINGS, SUPER_ADMIN_ROLE, log, radar_log,
-    # 安全
-    create_access_token, get_password_hash, verify_password,
-)
+from app.utils import BizError, Code, Fail
+
+# 推荐：抛异常（能在任意层穿透）
+raise BizError(code=Code.HR_INVALID_TRANSITION, msg="不允许从 'resigned' 转换为 'active'")
+
+# 替代：返回 Fail（仅在 api 层用）
+return Fail(code=Code.OLD_PASSWORD_WRONG, msg="原密码错误")
 ```
 
-不通过 `app.utils` 暴露的符号（`app.core.cache.*` 业务专用函数、`app.core.redis`、中间件、`init_app`、`app.system.models.*`）按需从原路径导入，但尽量保持"业务不依赖 system 内部"的边界。
+`SchemaValidationError`（继承 `BizError`）专用于 Pydantic 校验器中抛出：它**不**继承 `ValueError`，能直达全局处理器。
 
-### 6.6 事件总线
+---
 
-进程内、同步、单次遍历。失败的 handler 被记录到日志但不阻断发布者：
+## 7. Schema 基类
+
+`app/core/base_schema.py`：
+
+- `SchemaBase` — Pydantic `BaseModel` 子类，`alias_generator=to_camel_case`、`validate_by_name=True`；业务 schema 一律继承
+- `PageQueryBase(SchemaBase)` — 带 `current` / `size` / `orderBy` 的分页请求体
+- `Success(data=...)` / `SuccessExtra(data, total, current, size)` / `Fail(code, msg, ...)` / `Custom(...)` — `JSONResponse` 子类
+- `CommonIds(SchemaBase)` — `{ids: list[SqidId]}`，批量删除请求体
+- `OfflineByRoleRequest` — 按角色下线
+- `make_optional(model)` — 生成更新 schema 的工具（所有字段变 `Optional`）
+- `ResponseModel[T]` / `PageResponseModel[T]` — 给 OpenAPI Swagger UI 用的响应模型
+
+## 8. 模型基类
+
+`app/core/base_model.py`：
+
+- `BaseModel` — Tortoise Model 基类，主键 id、`to_dict()`（camelCase）、`__repr__` 等
+- `AuditMixin` — `created_at` / `updated_at` / `created_by` / `updated_by`（自动捕获 `CTX_USER_ID`）
+- `TreeMixin` — `parent_id` / `path` / `level`，树形结构工具
+- `SoftDeleteMixin` — 透明的 `deleted_at IS NULL` 过滤
+- `StatusType` — 枚举 `enable` / `disable`
+
+字段约定：
+
+- 继承 `BaseModel, AuditMixin`
+- 文件头 `# pyright: reportIncompatibleVariableOverride=false`
+- 字段必加 `description="..."`
+- 类 docstring 写中文名（`"""仓库"""`）
+- `Meta.table = "biz_<module>_<entity>"`
+- 每个 `ForeignKeyField` / `OneToOneField` 上方显式声明 `<name>_id: int`（或 `int | None`）注解
+- 创建 / 更新 / 比较一律用 `obj.<name>_id`；访问关系对象字段必须先 `prefetch_related(...)` 或 `await obj.<name>`
+
+## 9. CRUDBase / CRUDRouter
+
+`app/core/crud.py` 的 `CRUDBase`：泛型单资源 CRUD 入口，支持分页、`build_search`、`get_or_none`、软删除等。
 
 ```python
-from app.utils import emit, on
+class WarehouseController(CRUDBase[Warehouse, WarehouseCreate, WarehouseUpdate]):
+    pass
 
-@on("employee.created")
-async def _send_welcome(employee_id: int, **_):
-    ...
-
-# 另一层
-await emit("employee.created", employee_id=emp.id)
+warehouse_controller = WarehouseController(model=Warehouse)
 ```
 
-事件名约定 `<aggregate>.<verb>`（如 `employee.created`、`order.refunded`）。
+`build_search(obj_in, contains_fields=[...], exact_fields=[...])` 按 `PageQueryBase` 字段自动构造 Tortoise Q 过滤器：
 
-### 6.7 状态机
+- `contains_fields` — `name__icontains=value`
+- `exact_fields` — `status=value`
+- 空 / None / 空列表自动跳过
 
-```python
-from app.utils import StateMachine
-
-EmployeeSM = StateMachine(transitions={
-    "active":   ["on_leave", "resigned"],
-    "on_leave": ["active", "resigned"],
-    "resigned": [],
-})
-
-await EmployeeSM.transition(emp, to="on_leave", state_field="status",
-                            actor_id=ctx.user_id, log_fn=radar_log)
-```
-
-非法流转抛 `BizError(Code.HR_INVALID_TRANSITION, ...)`。
-
-### 6.8 事务
-
-用 `in_transaction(get_db_conn(Model))`；跨模型用 `get_db_conn` 取连接名，不要硬编码 `"conn_system"`（业务模块可能是独立库）。**不要**在事务里做 HTTP、Redis、队列。嵌套事务走 SAVEPOINT。
+`get_db_conn(Model)` 自动返回该模型所在的连接名（`conn_system` 或 `conn_<biz>`）。事务：
 
 ```python
 from tortoise.transactions import in_transaction
 from app.utils import get_db_conn
 
-async with in_transaction(get_db_conn(Product)):
-    product = await product_controller.create(obj_in=...)
-    await stock_controller.create(obj_in={"product_id": product.id, "qty": 0})
+async with in_transaction(get_db_conn(Invoice)):
+    await Invoice.create(...)
 ```
 
-并发保护：乐观锁用 `version` 字段 + `QuerySet.filter(..., version=v).update(version=v+1)` 的返回值判断冲突；悲观锁用 `select_for_update()`（SQLite 不支持，生产用 PG / MySQL）；跨 worker 协调用 Redis 分布式锁。
+**事务内禁止 HTTP / Redis / 队列**。
 
 ---
 
-## 7. 响应码
+## 10. Core 机制
 
-所有接口（含 200 / 4xx / 5xx）统一返回 `{"code": "xxxx", ...}`，HTTP status 恒 200。源码：`app/core/code.py`。
+### 10.1 事件总线
 
-### 7.1 码段划分
+`app/core/events.py` 提供进程内事件总线 `emit(event_name, **kwargs)` / `@on(event_name)`，用于业务模块之间**解耦通信**。业务模块**不得**直接 import 兄弟模块；跨模块联动走事件。
 
-| 码段 | 含义 |
-|---|---|
-| `0000` | 成功 |
-| `1000–1999` | 系统内部错误（异常、入参校验失败） |
-| `2000–2999` | 业务逻辑错误（认证、授权、资源冲突、业务失败） |
-| `3000–3999` | 框架预留（暂未使用） |
-| `4000–9999` | 项目自定义业务码 |
+### 10.2 状态机
 
-### 7.2 关键码
+`app/core/state_machine.py` 提供轻量状态机：声明允许的 state transitions，业务代码调 `transition.can(from, to)` 或直接 `transition.assert(from, to)`，非法状态流转抛 `BizError`。
 
-| 码 | 常量 | 说明 | 前端行为 |
-|---|---|---|---|
-| `0000` | `SUCCESS` | 成功 | 提取 `data` |
-| `1000` | `INTERNAL_ERROR` | 通用异常 | 显示 `msg` |
-| `1100` | `INTEGRITY_ERROR` | 唯一键 / 外键冲突 | 显示 `msg` |
-| `1101` | `NOT_FOUND` | `DoesNotExist` | 显示 `msg` |
-| `1200` | `REQUEST_VALIDATION` | 入参校验失败 | 显示 `msg`，`data.errors` 含字段级详情 |
-| `2100` | `INVALID_TOKEN` | Token 缺失 / 格式错 | 跳转登录 |
-| `2101` | `INVALID_SESSION` | Token 类型错 / 用户不存在 | 跳转登录 |
-| `2102` | `ACCOUNT_DISABLED` | 账号禁用 | 弹窗后登出 |
-| `2103` | `TOKEN_EXPIRED` | access token 过期 | 自动刷新 token |
-| `2106` | `SESSION_INVALIDATED` | `token_version` 递增，旧 token 失效 | 跳转登录 |
-| `2200` | `API_DISABLED` | 接口被禁用 | — |
-| `2201` | `PERMISSION_DENIED` | RBAC 接口权限不足 | — |
-| `2202` | `MISSING_BUTTON_PERMISSION` | 缺必需按钮（`require_all=True`） | — |
-| `2203` | `NEED_ANY_BUTTON_PERMISSION` | 无任一按钮权限 | — |
-| `2206` | `SUPER_ADMIN_ONLY` | 仅超管 | — |
-| `23xx` | `DUPLICATE_*` | 资源冲突（role_code / email / phone / username / menu_route） | — |
-| `2400` | `FAIL` | 兜底（**避免使用**，新增场景请分配新码） |
-| `2401` | `WRONG_CREDENTIALS` | 用户名或密码错误 |
-| `2500` | `RATE_LIMITED` | 请求过于频繁 |
-| `2501` | `IP_BANNED` | IP 被封 |
-| `26xx` | `*_REQUIRED` | Schema 必填（`USERNAME_REQUIRED` 等） |
-| `27xx` | `HR_*` | HR 业务码示例（`HR_INVALID_TRANSITION` 等） |
+### 10.3 Sqids
 
-### 7.3 抛出方式
+`app/core/sqids.py`：
 
-```python
-from app.utils import BizError, Code, Fail
+- `encode_id(int) -> str` / `decode_id(str) -> int`
+- `SqidId` — Pydantic 类型，body 字段用
+- `SqidPath` — FastAPI 路径参数用
 
-# 推荐：任意层穿透
-raise BizError(code=Code.HR_INVALID_TRANSITION, msg="不允许的状态流转")
+字母表由 `SECRET_KEY` 派生——轮换 SECRET_KEY 会使所有外部 sqid 链接失效。详见 FAQ。
 
-# 仅在 api 层用，更直白
-return Fail(code=Code.OLD_PASSWORD_WRONG, msg="原密码错误")
-```
+### 10.4 BizError / 异常
 
-Schema 校验器中用 `SchemaValidationError(code, msg)`（继承 `BizError`，绕过 Pydantic 对 `ValueError` 的捕获）。
+`app/core/exceptions.py`：
 
-### 7.4 前端码映射（`.env`）
+- `BizError(code, msg)` — 业务异常，全局处理器捕获转成 `Fail`
+- `SchemaValidationError(BizError)` — 专用于 Pydantic 校验器（不继承 `ValueError`）
+- 全局处理器覆盖 `BizError` / `DoesNotExist` / `IntegrityError` / `ValidationError`
 
-| 变量 | 默认 | 行为 |
-|---|---|---|
-| `VITE_SERVICE_SUCCESS_CODE` | `0000` | 提取 `data` |
-| `VITE_SERVICE_LOGOUT_CODES` | `2100,2101` | 直接登出 |
-| `VITE_SERVICE_MODAL_LOGOUT_CODES` | `2102` | 弹窗后登出 |
-| `VITE_SERVICE_EXPIRED_TOKEN_CODES` | `2103` | 自动刷新 token 并重试 |
+**不要** `raise HTTPException`；用 `BizError` / `SchemaValidationError`。
 
----
+### 10.5 ContextVars
 
-## 8. 业务模块：autodiscover 与目录约定
+`app/core/ctx.py`：
 
-`app/core/autodiscover.py` 在启动时扫描 `app/business/*`（`_` 前缀目录跳过），按约定加载：
+- `CTX_USER_ID` — 当前请求用户 ID
+- `CTX_ROLE_CODES` — 当前用户角色码集合
+- `CTX_BUTTON_CODES` — 当前用户按钮码集合
+- `CTX_X_REQUEST_ID` — 请求 ID（由中间件注入）
+- `CTX_BG_TASKS` — 后台任务队列
+
+`AuditMixin` 的 `created_by` / `updated_by` 自动从 `CTX_USER_ID` 取值。
+
+### 10.6 Autodiscover
+
+`app/core/autodiscover.py` 启动时扫描 `app/business/*`：
 
 | 约定 | 提供的能力 |
 |---|---|
 | `app/business/<name>/models.py` 或 `models/` | Tortoise 模型 → 注册到 `TORTOISE_ORM["apps"]` |
-| `app/business/<name>/api/` 或 `api.py` | 必须导出 `router: APIRouter` → 挂到 `/api/v1/business/<name>/*` |
+| `app/business/<name>/api/` 或 `api.py` | 必须导出 `router: APIRouter` → 挂载到 `/api/v1/business/<name>/*` |
 | `app/business/<name>/init_data.py` | 可选 `async def init()` → 系统初始化后、缓存刷新前执行 |
-| `app/business/<name>/config.py` 声明 `DB_URL` | 注册独立连接 `conn_<name>` 与独立 app（多库支持） |
+| `app/business/<name>/config.py` 中声明 `DB_URL` | 注册独立连接 `conn_<name>` 与独立 app |
 
-推荐目录结构（参考 `app/business/hr/`）：
+临时屏蔽某模块：`mv app/business/xxx app/business/_xxx`（`_` 前缀目录会被跳过）。
+
+### 10.7 Radar 内置监控
+
+`app/system/radar/` 是参考 fastapi-radar 实现的内置 Dashboard，路径 `/manage/radar/*`：记录请求、SQL、异常、审计埋点。启用通过配置项开关。关键埋点 / 权限拒绝用 `radar_log(...)`；高频调试用 `log.debug`；**不要** `print(...)`。
+
+### 10.8 密码 & JWT
+
+- 密码哈希：Argon2（`app/system/security.py`）
+- JWT：HS256，access 12h，refresh 7d
+- Token 版本号：Redis `token_version:{uid}`，修改密码 / 模拟登录时 `INCR`，旧 token 在下一次请求返回 `2106 SESSION_INVALIDATED`
+
+---
+
+## 11. 业务模块开发
+
+### 11.1 目录约定
 
 ```
 app/business/<name>/
 ├── __init__.py
 ├── config.py          # BIZ_SETTINGS（可选，独立库、环境变量）
-├── ctx.py             # 模块上下文变量（按需）
+├── ctx.py             # 模块上下文变量
 ├── dependency.py      # 模块专属依赖
 ├── models.py          # Tortoise 模型
 ├── schemas.py         # Pydantic schema（继承 SchemaBase）
-├── controllers.py     # CRUDBase 子类（单资源）
+├── controllers.py     # CRUDBase 子类
 ├── services.py        # 多模型编排
-├── init_data.py       # async def init()：菜单 / 角色 / 种子
+├── init_data.py       # async def init()：菜单 / 角色 / 种子数据
 └── api/
-    ├── __init__.py    # 必须导出汇总后的 router
+    ├── __init__.py    # 导出汇总后的 router
     ├── manage.py
     └── my.py
 ```
 
-### 8.1 业务模块开发流程（CLI）
+### 11.2 新增模块流程
 
 ```bash
-# 1. 装依赖、首次初始化数据库（仅首次）
-make install-all
-make initdb
-
-# 2. 创建模块骨架（只含 models.py）
-make cli-init MOD=inventory
-
-# 3. 编辑 app/business/inventory/models.py，定义 Tortoise 模型
-#    - 继承 BaseModel, AuditMixin
-#    - 每字段加 description="..."
-#    - 类 docstring 写中文名 """仓库"""
-#    - Meta.table = "biz_inventory_warehouse"
-
-# 4. 生成后端 + 前端代码（也可分两步 cli-gen / cli-gen-web）
-make cli-gen-all MOD=inventory CN=库存管理
-
-# 5. 合并 i18n 片段（按生成文件头注释指示把 route 与 page 片段粘贴到 langs/zh-cn.ts / en-us.ts）
-
-# 6. 处理 TODO（外键 / 自定义枚举的 options 数据源）
-
-# 7. 迁移数据库
-make mm            # == makemigrations + migrate
-
-# 8. 启动并验证
-make dev
-
-# 9. 提交前质量检查
-make check-all
+make cli-init MOD=inventory                       # 1. 生成骨架（仅 models.py）
+$EDITOR app/business/inventory/models.py          # 2. 定义 Tortoise 模型
+make cli-gen-all MOD=inventory CN=库存管理        # 3. 同时生成后端 + 前端 CRUD
+# 4. 合并 web/src/locales/langs/_generated/inventory/ 的 3 个 .md 片段到对应源文件
+# 5. 处理前端外键 / 自定义枚举的 TODO（options 数据源）
+make mm                                           # 6. 迁移
+make dev                                          # 7. 启动验证
+make check-all                                    # 8. 提交前
 ```
 
-字段类型映射（CLI 根据 Tortoise 字段自动推导前端表单）：
+### 11.3 启动时初始化与对账
 
-| Tortoise 字段 | TS 类型 | 后端 schema | 前端表单 | 前端搜索 |
-|---|---|---|---|---|
-| `CharField` | `string` | `str` | `NInput` | `NInput` |
-| `TextField` | `string` | `str` | `NInput type="textarea"` | `NInput` |
-| `IntField` / `BigIntField` | `number` | `int` | `NInputNumber` | `NInputNumber` |
-| `DecimalField` / `FloatField` | `number` | `Decimal` / `float` | `NInputNumber :precision="2"` | 跳过 |
-| `BooleanField` | `boolean` | `bool` | `NSwitch` | — |
-| `DateField` / `DatetimeField` | `string` | `date` / `datetime` | `NDatePicker` | — |
-| `CharEnumField(StatusType)` | `string` | `StatusType` | `NSelect statusTypeOptions` | 同左 |
-| `CharEnumField(其他枚举)` | `string` | `str` | `NSelect` + TODO | 同左 |
-| `ForeignKeyField` | `number` | `int` | `NSelect` + TODO | 同左 |
+启动由 Redis leader worker 执行：`init_menus()` → `refresh_api_list()` → `init_users()` → 依次调用各业务模块的 `init_data.init()` → `refresh_all_cache()`。
 
-### 8.2 init_data 的同步语义
+**不同数据类型的同步语义：**
 
-| 数据类型 | 同步方式 | 改字段 | 新增项 | 删除项 | 重命名 |
+| 类型 | 同步方式 | 改字段 | 新增 | 删除 | 重命名 |
 |---|---|---|---|---|---|
-| **API** | `refresh_api_list` 全量对账 | ✅ 自动 | ✅ 自动 | ✅ 自动 | ✅ 自动（删旧建新） |
-| **菜单 / 按钮** | `ensure_menu` upsert + 可选 `reconcile_menu_subtree` | ✅ 自动 | ✅ 自动 | ⚠️ 需启用对账 | ⚠️ 需启用对账 |
-| **角色** | `ensure_role` upsert；`menus/buttons/apis` clear-and-readd | ✅ 自动 | ✅ 自动 | ❌ 需手动清库 | ❌ 需手动清库 |
-| **业务种子数据** | `_safe_update_or_create` 按唯一键 | ✅ 自动 | ✅ 自动 | ❌ 需手动清库 | ❌ 需手动清库 |
+| **API** | `refresh_api_list()` 全量对账 | ✅ | ✅ | ✅ | ✅（删旧建新） |
+| **菜单 / 按钮** | `ensure_menu()` upsert + 可选 `reconcile_menu_subtree()` | ✅ | ✅ | ⚠️ 需启用对账 | ⚠️ 需启用对账 |
+| **角色** | `ensure_role()` upsert；`menus / buttons / apis` clear-and-readd | ✅ | ✅ | ❌ 走迁移 | ❌ 走迁移 |
+| **业务种子数据** | `_safe_update_or_create` 按唯一键 | ✅ | ✅ | ❌ 走迁移 | ❌ 走迁移 |
 
-一旦对某子树调用 `reconcile_menu_subtree()`，该子树变成 **Infrastructure-as-Code** 模式：通过 Web UI 手工在该子树下创建的菜单 / 按钮会在下次重启时被清除。需要允许用户动态加菜单的子树**不要**对它调用。
+**关键约定**：
 
-`ensure_role` 的漂移告警：声明列表里引用的 `route_name` / `button_code` / `(method, path)` 在数据库找不到时会 log.warning——**看到立即修**，否则角色权限会静默缺失。
+- **漂移告警**：`ensure_role` 引用的 `route_name` / `button_code` / `(method, path)` 无法解析时会 `log.warning`——务必立即修复，否则角色权限会静默缺失
+- **IaC 模式**：一旦对某子树启用 `reconcile_menu_subtree()`，该子树成为单一数据源，通过 Web UI 手工创建在该子树下的菜单 / 按钮会在下次重启时被清除
+- 需要允许用户动态创建菜单的子树，**不要**对它调用 `reconcile_menu_subtree()`
 
-### 8.3 init_data 示例
+### 11.4 init_data.py 示例
 
 ```python
 from app.system.services import ensure_menu, ensure_role, reconcile_menu_subtree
@@ -632,7 +751,9 @@ INVENTORY_MENU_CHILDREN = [
         "component": "view.inventory_warehouse",
         "icon": "mdi:warehouse",
         "order": 1,
-        "buttons": [{"button_code": "B_INV_CREATE", "button_desc": "创建仓库"}],
+        "buttons": [
+            {"button_code": "B_INV_CREATE", "button_desc": "创建仓库"},
+        ],
     },
 ]
 
@@ -640,7 +761,7 @@ INVENTORY_ROLE_SEEDS = [
     {
         "role_name": "库存管理员",
         "role_code": "R_INV_MGR",
-        "data_scope": "all",
+        "data_scope": DataScopeType.department,     # ← 必须显式
         "menus": ["home", "inventory", "inventory_warehouse"],
         "buttons": ["B_INV_CREATE"],
         "apis": [
@@ -650,10 +771,14 @@ INVENTORY_ROLE_SEEDS = [
     }
 ]
 
+
 async def init():
     await ensure_menu(
-        menu_name="库存管理", route_name="inventory", route_path="/inventory",
-        icon="mdi:package-variant", order=9,
+        menu_name="库存管理",
+        route_name="inventory",
+        route_path="/inventory",
+        icon="mdi:package-variant",
+        order=9,
         children=INVENTORY_MENU_CHILDREN,
     )
     await reconcile_menu_subtree(
@@ -665,105 +790,57 @@ async def init():
         await ensure_role(**role)
 ```
 
-删除模块：直接删 `app/business/<module>/` 整个目录，autodiscover 自动跳过；数据库表不会自动删，需手动 `DROP TABLE` 或写迁移。
+### 11.5 删除模块
+
+直接删除 `app/business/<module>/` 整个目录即可，autodiscover 下次启动自动跳过。
+
+> 数据库表**不会**被 Tortoise 自动删除。如需清理，手动 `DROP TABLE` 或写一次迁移。
 
 ---
 
-## 9. 缓存模型
+## 12. CLI 代码生成
 
-| 数据 | Redis Key | TTL | 写入方 |
-|---|---|---|---|
-| 常量路由 | `constant_routes` | 永久 | `refresh_all_cache` |
-| 角色菜单 ID | `role:{code}:menus` | 永久 | `load_role_permissions` |
-| 角色 API | `role:{code}:apis` | 永久 | 同上 |
-| 角色按钮 | `role:{code}:buttons` | 永久 | 同上 |
-| 角色数据范围 | `role:{code}:data_scope` | 永久 | 同上 |
-| 用户角色 | `user:{uid}:roles` | 永久 | `load_user_roles` |
-| 用户首页 | `user:{uid}:role_home` | 永久 | 同上 |
-| Token 版本 | `token_version:{uid}` | 永久 | 修改密码 / 模拟登录 |
-| 业务自有缓存 | 按模块自定义 | 模块自定 | 模块自定 |
-
-Redis 故障时降级到数据库查询（log WARNING）。
-
-业务缓存命名：`<module>_<resource>:<scope>`（如 `hr_dept_stats:all`、`dict_options:tag_category`）；启动协调 key：`app:<purpose>`（如 `app:init_lock` / `app:init_done`）。
-
-**不要**给带分页 / 多参数的接口加全局 `@cache(...)` 装饰器；业务自有热点按"读 → miss → 查 → 写带 TTL"模式手写并**主动失效**。
-
----
-
-## 10. 多数据库
-
-默认所有模型挂在主连接 `conn_system`。业务模块在自己的 `config.py` 声明独立 `DB_URL` 时，autodiscover 会注册独立连接 `conn_<biz>` 与独立 app。
-
-- 跨模型事务用 `get_db_conn(Model)` 取连接名，**不要硬编码**
-- `migrations/app_system/` 放主 + 共享模型的迁移；`migrations/<module>/` 放模块独立库的迁移
-- SQLite（开发）/ Postgres / MySQL / SQL Server 都支持
-
----
-
-## 11. Radar 监控 & Guard
-
-- **Radar**（`app/system/radar/`）：请求、SQL 查询、异常、用户埋点（`radar_log(...)`），Dashboard 在 `/manage/radar/*` 五个页面。
-- **fastapi-guard**：限流 / 自动封禁。触发时前端收到 `2500` / `2501` / `2502`。
-
----
-
-## 12. 命令参考
-
-### 12.1 后端
-
-| Make 命令 | 原始命令 | 作用 |
-|---|---|---|
-| `make install` | `uv sync` | 安装后端依赖 |
-| `make run` | `uv run python run.py` | 启动后端（:9999） |
-| `make lint` | `uv run ruff check app/` + `uv run ruff format --check app/` | Ruff 检查（不修改） |
-| `make fmt` | `uv run ruff check --fix` + `uv run ruff format` | Ruff 自动修复 + 格式化 |
-| `make typecheck` | `uv run basedpyright app` | 静态类型检查 |
-| `make test` | `uv run pytest tests/ -v` | 单元测试 |
-| `make check` | — | fmt + typecheck + test |
-
-### 12.2 数据库
-
-| Make 命令 | 原始命令 | 作用 |
-|---|---|---|
-| `make initdb` | `uv run python -m app.cli initdb` | 首次初始化（建表 + 基础数据） |
-| `make makemigrations` | `uv run tortoise makemigrations` | 生成迁移文件 |
-| `make migrate` | `uv run tortoise migrate` | 应用未执行的迁移 |
-| `make mm` | — | makemigrations + migrate |
-| `make dbhistory` | `uv run tortoise history` | 查看迁移历史 |
-
-启动时**不会**自动建表或执行迁移。全新克隆的仓库先 `make initdb`，之后模型变更手动 `make mm`。
-
-### 12.3 代码生成
-
-| Make 命令 | 原始命令 | 作用 |
-|---|---|---|
-| `make cli-init MOD=xxx` | `uv run python -m app.cli init <MOD>` | 创建业务模块骨架 |
-| `make cli-gen MOD=xxx` | `uv run python -m app.cli gen <MOD>` | 生成后端 schemas/controllers/api |
-| `make cli-gen-web MOD=xxx [CN=中文名]` | `uv run python -m app.cli gen-web <MOD>` | 生成前端 service/typings/views/i18n |
-| `make cli-gen-all MOD=xxx [CN=中文名]` | — | 一次跑完 cli-gen + cli-gen-web |
-
-### 12.4 前端
-
-| Make 命令 | 原始命令 | 作用 |
-|---|---|---|
-| `make web-install` | `cd web && pnpm install` | 安装前端依赖 |
-| `make web-dev` | `cd web && pnpm dev` | 启动前端（:9527） |
-| `make web-build` | `cd web && pnpm build` | 生产构建 |
-| `make web-lint` | `cd web && pnpm lint` | ESLint + oxlint |
-| `make web-typecheck` | `cd web && pnpm typecheck` | vue-tsc 类型检查 |
-| `make web-check` | — | web-lint + web-typecheck |
-
-### 12.5 全栈 & Docker
-
-| 命令 | 作用 |
+| Make 命令 | 作用 |
 |---|---|
-| `make install-all` | 同时装后端 + 前端依赖 |
-| `make dev` | 并行启动后端（:9999）+ 前端（:9527） |
-| `make check-all` | 后端 + 前端所有质量检查 |
-| `make up` | `docker compose up -d`（nginx :1880 + fastapi :9999 + redis） |
-| `make down` | `docker compose down` |
-| `make logs` | `docker compose logs -f` |
+| `make cli-init MOD=xxx` | 创建业务模块骨架（只含 `models.py`） |
+| `make cli-gen MOD=xxx` | 解析 `models.py`，生成后端 schemas / controllers / api / init_data / services |
+| `make cli-gen-web MOD=xxx CN=中文名` | 解析 `models.py`，生成前端 service / typings / views / i18n 片段 |
+| `make cli-gen-all MOD=xxx CN=中文名` | 一次跑完 cli-gen + cli-gen-web |
+
+### 12.1 字段类型映射
+
+| Tortoise 字段 | TS 类型 | 后端 schema | 前端表单 | 前端搜索 |
+|---|---|---|---|---|
+| `CharField` | `string` | `str` | `NInput` | `NInput` |
+| `TextField` | `string` | `str` | `NInput type="textarea"` | `NInput` |
+| `IntField` / `BigIntField` | `number` | `int` | `NInputNumber` | `NInputNumber` |
+| `DecimalField` / `FloatField` | `number` | `Decimal` / `float` | `NInputNumber :precision="2"` | 跳过 |
+| `BooleanField` | `boolean` | `bool` | `NSwitch` | — |
+| `DateField` | `string` | `date` | `NDatePicker type="date"` | — |
+| `DatetimeField` | `string` | `datetime` | `NDatePicker type="datetime"` | — |
+| `CharEnumField(StatusType)` | `string` | `StatusType` | `NSelect statusTypeOptions` | 同左 |
+| `CharEnumField(其他枚举)` | `string` | `str` | `NSelect` + TODO | 同左 |
+| `ForeignKeyField` | `number` | `int` | `NSelect` + TODO | 同左 |
+
+### 12.2 i18n 命名
+
+- **模块中文名**：`init` 命令时输入，用于 `route.<module>` 和 `page.<module>` 顶层
+- **模型中文名**：类 docstring（`"""仓库"""`）或 `Meta.table_description`
+- **字段中文名**：`description="..."`，截断到第一个中英文句号之前
+  - `description="仓库编号。全局唯一"` → 取 `仓库编号`
+  - 空 / 未填 → fallback 为字段名本身
+
+### 12.3 i18n 片段合并
+
+生成物用 `.md` 扩展名、**不会**被 pnpm 构建直接加载，需要手动合并：
+
+| 生成文件 | 合并到 | 合并到哪段 |
+|---|---|---|
+| `_generated/<mod>/zh-cn.md` | `web/src/locales/langs/zh-cn.ts` | `route` / `page` 对象 |
+| `_generated/<mod>/en-us.md` | `web/src/locales/langs/en-us.ts` | `route` / `page` 对象 |
+| `_generated/<mod>/app.d.ts.md` | `web/src/typings/app.d.ts` | `App.I18n.Schema.page` 子树 |
+
+⚠️ **必须合并 `app.d.ts.md`**——不合并会导致 `$t('page.xxx...')` 编译报错。`route` 命名空间由 Elegant Router 自动补齐，不需要手动改类型。
 
 ---
 
@@ -771,238 +848,408 @@ Redis 故障时降级到数据库查询（log WARNING）。
 
 ### 13.1 技术栈
 
-Vue 3.5 + Vite 7 + TypeScript 5.9 + Naive UI 2.44 + Pinia 3 + UnoCSS + Alova（HTTP）+ vue-router 4 + Elegant Router + vue-i18n + ECharts 6。`web/` 是 pnpm workspace；`web/packages/` 是内部子包（alova / axios / hooks / utils / color / uno-preset）。
+| 技术 | 版本 | 用途 |
+|---|---|---|
+| Vue | 3.5 | UI 框架 |
+| Vite | 7 | 构建 |
+| TypeScript | 5.9 | 类型 |
+| Naive UI | 2.44 | 组件库 |
+| Pinia | 3 | 状态管理 |
+| UnoCSS | 66+ | 原子化 CSS |
+| Alova | — | HTTP 客户端 |
+| vue-router | 4 | 动态路由 |
+| vue-i18n | 11 | 国际化 |
+| Elegant Router | — | 由 `views/` 目录自动生成路由 |
+| unplugin-icons | — | 按需注册图标 |
 
-### 13.2 路由
+### 13.2 与后端的关系
 
-- **动态路由**：登录后由后端 `GET /api/v1/route/user-routes` 下发；按角色过滤
-- **常量路由**：内置（登录、403/404/500、home），`meta.constant=true`；由 `GET /api/v1/route/constant-routes` 下发
-- **Elegant Router**：根据 `web/src/views/` 文件结构自动生成路由，`views/hr/employee/index.vue` → 路径 `/hr/employee`、name `hr_employee`；`[id].vue` → `:id` 参数；`_` 前缀目录会展平层级
-- **守卫**：`beforeEach` 完成首次初始化（拉 user-info / 用户路由 / 常量路由），校验登录与角色后放行；`afterEach` 走 NProgress 与同步 `document.title`
-- **useRouterPush**：类型安全路由（`routerPushByKey('route_name', params)` / `toHome()` / `toLogin()` / `routerBack()`）
-- **keep-alive**：组件用 `defineOptions({ name: '...' })` + 路由 `meta.keepAlive=true`；重新激活时用 `onActivated()` 做刷新
-- **Layout 组件**：`layout.base`（含侧栏）/ `layout.blank`（空白）/ `view.xxx`（纯页面）/ `layout.base$view.xxx`（组合）；由路由结构自动推断
+前端**不**自己定义权限、不自己定义可见路由——这两类数据由后端按角色下发：
 
-### 13.3 请求层
-
-- 基于 **Alova**；`createRequest()` 返回 `Promise<data>`，`createFlatRequest()` 返回 `{data, error}`
-- 自动注入 Authorization 头；收到 `2103` 自动拉 refresh-token 并重放；`2100/2101` 直接登出；`2102` 弹窗后登出
-- API 函数放在 `web/src/service/api/<module>.ts`，命名 `fetchXxx*`；类型在 `web/src/typings/api/<module>.d.ts`（`Api.<Module>.<Type>`）
-- 资源 ID 透传 sqid 字符串（前端不解码）
-- 代理：开发走 Vite `server.proxy` → `http://127.0.0.1:9999`；生产走 Nginx → `http://app:9999`。前端始终用相对路径 `/api/v1/...`
-- 多后端：在 `.env` 加 `VITE_OTHER_SERVICE_BASE_URL`，创建独立的请求工厂
-
-### 13.4 Pinia
-
-| 模块 | 内容 |
+| 数据 | 来源 |
 |---|---|
-| `auth` | token / user-info / 登录态 |
-| `route` | 动态路由树、扁平路由、已访问路由 |
-| `tab` | 多页签状态 |
-| `theme` | 颜色 / 布局 / 暗色模式 |
-| `app` | 全局状态（语言、加载） |
+| 当前用户的角色 / 按钮权限 | `GET /api/v1/auth/user-info` |
+| 公共路由（登录 / 错误页等） | `GET /api/v1/route/constant-routes` |
+| 当前用户能看到的菜单树 | `GET /api/v1/route/user-routes` |
+| 字典选项 | `GET /api/v1/system-manage/dictionaries/{type}/options` |
 
-### 13.5 主题
-
-- 默认配置在 `web/src/theme/settings.ts` → 存 localStorage → 应用到 Naive UI 与 UnoCSS
-- 5 种语义色（primary / info / success / warning / error），每种 11 级（50–950）
-- 暗色模式：`<html class="dark">` 切换，UnoCSS `dark:` 前缀，自动作用到 Naive UI
-- 布局模式：vertical / horizontal / vertical-mix / horizontal-mix
-- UnoCSS 类：`text-primary`、`bg-primary-100`、`border-primary` 由主题自动生成
-
-### 13.6 图标
-
-- Iconify（在线 / 离线）：`icon-mdi-home`、`icon-material-symbols-settings-rounded`
-- 本地 SVG：`web/src/assets/svg-icon/*.svg` → `icon-local-<name>`
-- 前缀由 `.env` 的 `VITE_ICON_PREFIX` / `VITE_ICON_LOCAL_PREFIX` 配置
-- 使用方式：直接组件（编译时校验）、`<svg-icon icon="..." />`（运行时动态）、`useSvgIconRender()` 渲染函数
-- 菜单图标：后端 `Menu.icon` + `Menu.icon_type`（`1` = iconify，`2` = local）
-
-### 13.7 表格与 CRUD Hooks
-
-- `useNaivePaginatedTable`：分页 / 列 / loading / 搜索参数，参数变化自动拉数据；返回 `{ data, columns, loading, getData, getDataByPage, ... }`
-- `useTableOperate`：CRUD 抽屉状态，`{ drawerVisible, operateType, editingData, handleAdd, handleEdit, handleBatchDelete, ... }`
-- `hasAuth(button_code)`：按钮权限判断
-
----
-
-## 14. 命名规范
-
-### 14.1 文件 / 目录
-
-| 位置 | 规范 | 示例 |
-|---|---|---|
-| 前端 | `kebab-case` | `user-list.vue`、`hooks/use-table.ts` |
-| 后端 | `snake_case` | `init_helper.py`、`hr/api/manage.py` |
-| 业务模块名 | `snake_case` 单词 | `hr` / `inventory` |
-
-### 14.2 Python
-
-| 类型 | 规范 | 示例 |
-|---|---|---|
-| 类 | `PascalCase` | `UserController` / `EmployeeCreate` |
-| 函数 / 方法 | `snake_case` | `get_user()` |
-| 模块级常量 | `UPPER_SNAKE_CASE` | `SECRET_KEY` / `SUPER_ADMIN_ROLE` |
-| 模块级私有 | `_snake_case` | `_safe_update_or_create()` |
-| 字段（DB / Schema 内部） | `snake_case` | `user_name` / `created_at` |
-| 字段（HTTP 边界） | **camelCase** | `userName` / `createdAt` |
-| Pydantic 模型 | `PascalCase` + `Create/Update/Search/Out` | `EmployeeCreate` |
-| Tortoise 模型 | `PascalCase` 单数 | `Employee` / `Department` |
-| `Meta.table` | `<scope>_<module>_<entity>` | `biz_hr_employee` / `sys_dictionary` |
-
-### 14.3 TypeScript
-
-| 类型 | 规范 | 示例 |
-|---|---|---|
-| 组件 | `PascalCase` | `UserCard` |
-| Composable | `useXxx` | `useTable` |
-| 函数 | `camelCase` | `getUser()` |
-| 常量 | `UPPER_SNAKE_CASE` | `MAX_COUNT` |
-| API 请求函数 | `fetchXxx` | `fetchUserList()` |
-| 类型 / 接口 | `Api.<Module>.<Type>` | `Api.User.UserOut` |
-
-### 14.4 URL
-
-| 类型 | 规范 | 示例 |
-|---|---|---|
-| 资源段 | 复数 + `kebab-case` | `/users` / `/system-manage/users` |
-| 子资源 | 复数 + 父 ID | `/roles/{id}/menus` |
-| 集合动作 | 资源 + `/<verb-noun>` | `/roles/batch-offline` |
-| 实例动作 | `/{id}/<verb-noun>` | `/employees/{id}/transition` |
-| 派生 | `/<noun>` | `/menus/tree` |
-| ❌ | 尾斜杠、camelCase、复数单数混用 | ❌ `/users/` / ❌ `/userList` |
-
-### 14.5 业务码 / 路由名 / 事件名
-
-```
-B_<MODULE>_<RESOURCE>_<ACTION>      # 按钮编码
-R_<UPPER>                           # 角色编码
-<module>_<page>[_<sub>]             # 路由名（vue-router name = Menu.route_name）
-<aggregate>.<verb>                  # 事件名（employee.created）
-```
-
-i18n key：`route.<route_name>` / `page.<module>.<key>` / `common.<key>`。
-缓存 key：系统级 `role:{code}:*` / `user:{uid}:*`；业务级 `<module>_<resource>:<scope>`；启动协调 `app:<purpose>`。
-
----
-
-## 15. 后端风格（PR review checklist）
-
-1. **响应**：必须用 `Success / SuccessExtra / Fail`；不要返回裸 dict；每个失败场景分配唯一业务码，避免 `Code.FAIL` 兜底；业务异常用 `raise BizError(code, msg)`，`Fail(...)` 仅在 api 层用
-2. **Schema**：业务 schema 继承 `SchemaBase`；分页搜索继承 `PageQueryBase`；ID 用 `SqidId / SqidPath`；整型用 `Int16/32/64`；Update schema 用 `make_optional`；校验器内用 `SchemaValidationError` 而非 `ValueError`
-3. **API 路径**：列表 `POST /resources/search`、单条 `GET/PATCH/DELETE /resources/{id}`、创建 `POST /resources`、批量删除 `DELETE /resources` + `CommonIds`；kebab-case 多词路径；复数资源名；不带尾斜杠；不要 `GET ?...=...` 复杂搜索
-4. **CRUD**：标准 6 路由必须用 `CRUDRouter`；自定义用 `@crud.override`；不要绕过 `_OrderedRouter`；controller / service 不导入 `fastapi.Request/Response`
-5. **分层职责**：严格遵守 api/services/controllers/models/schemas 的边界
-6. **权限**：写接口必须挂按钮权限；角色种子必须显式 `data_scope`；涉及行级权限的列表必须 `@override("list")` 拼 `build_scope_filter`；不要靠前端隐藏按钮做安全；不要在业务里直接判 `role_code == "..."`，用 `has_role_code` / `has_button_code`
-7. **模型**：继承 `BaseModel + AuditMixin`；`# pyright: reportIncompatibleVariableOverride=false` 头；字段加 `description=...`；类 docstring 写中文名；`Meta.table = biz_<module>_<entity>`
-8. **业务模块边界**：import 入口统一走 `app.utils`；跨模块用事件总线；不得反向依赖 `app.system.*`；模块之间互相不 import
-9. **异常**：用 `BizError / SchemaValidationError`；不要 `raise HTTPException`；不要 catch `Exception` 后吞掉；事务用 `in_transaction(get_db_conn(Model))`；不要硬编码连接名
-10. **缓存**：业务自有热点手写 + 主动失效；不要给分页 / 多参数接口加全局 `@cache(...)`；按 `<module>_<resource>:<scope>` 命名
-11. **日志与监控**：关键节点 / 权限拒绝 / 异常分支用 `radar_log`；高频调试用 `log.debug`；不要 `print(...)`
-12. **类型注解与格式化**：所有函数加类型注解；提交前跑 `make fmt`、`make typecheck`、`make test`、`make check`；行宽 200，双引号；basedpyright standard 模式必须通过
-13. **提交前**：`make check-all`（含 ruff + basedpyright + pytest + eslint + oxlint + vue-tsc）
-
----
-
-## 16. 前端风格
-
-- SFC 用 `<script setup lang="ts">`；keep-alive 页面必须 `defineOptions({ name: '...' })`，name 与路由 name 一致
-- 列表页统一 `useNaivePaginatedTable` + `useTableOperate`，不要手写分页逻辑
-- 不要硬编码中文；文案走 `$t('...')` / `t('...')`；i18n key：`route.xxx` / `page.<module>.<key>` / `common.<key>`
-- `<Transition>` 包含内容必须是**单根节点**
-- 使用相对路径 `/api/v1/...`，不要写完整 URL
-- 资源 ID 透传 sqid 字符串，不要 `parseInt`
-
----
-
-## 17. 配置（`.env`）
-
-关键项（完整列表见 `app/core/config.py`）：
-
-- `SECRET_KEY` — JWT 签名 + Sqids 字母表来源
-- `DB_URL` — 主库连接（SQLite / Postgres / MySQL / SQL Server）
-- `REDIS_URL` — Redis 连接
-- `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`（默认 720，12h）/ `JWT_REFRESH_TOKEN_EXPIRE_MINUTES`（默认 10080，7d）
-- `CORS_ORIGINS` — 允许的前端来源
-- `APP_DEBUG` — debug 模式
-- `PROXY_HEADERS_ENABLED` — 让 Granian 还原 `X-Forwarded-*`
-- `GUARD_*` — fastapi-guard 限流参数
-- `LOG_INFO_RETENTION` — 日志保留
+### 13.3 错误码映射
 
 前端 `.env`：
 
-- `VITE_SERVICE_SUCCESS_CODE` / `VITE_SERVICE_LOGOUT_CODES` / `VITE_SERVICE_MODAL_LOGOUT_CODES` / `VITE_SERVICE_EXPIRED_TOKEN_CODES`
-- `VITE_OTHER_SERVICE_BASE_URL`（多后端场景）
-- `VITE_ICON_PREFIX` / `VITE_ICON_LOCAL_PREFIX`
+| 变量 | 默认值 | 行为 |
+|---|---|---|
+| `VITE_SERVICE_SUCCESS_CODE` | `0000` | 视为成功，提取 `data` |
+| `VITE_SERVICE_LOGOUT_CODES` | `2100,2101` | 直接登出 |
+| `VITE_SERVICE_MODAL_LOGOUT_CODES` | `2102` | 弹窗提示后登出 |
+| `VITE_SERVICE_EXPIRED_TOKEN_CODES` | `2103` | 自动用 refresh token 刷新并重试 |
+| 其他 | — | 显示 `msg` 错误消息 |
+
+### 13.4 关键 Hooks
+
+- `useNaivePaginatedTable` — 表格数据（搜索 / 分页 / 加载态一体）
+- `useTableOperate` — 表格 CRUD 操作
+- `useRouterPush` — 路由跳转（带类型补全）
+- `hasAuth` — 按钮权限判断
 
 ---
 
-## 18. 部署
+## 14. 切换数据库
 
-### 18.1 Docker Compose
+`DB_URL` 在根目录 `.env`：
 
-```bash
-make up       # nginx (:1880) + fastapi (:9999) + redis
-make logs     # 实时日志
-make down     # 停止并移除
+```dotenv
+# SQLite（默认）
+DB_URL="sqlite://app_system.sqlite3?busy_timeout=5000"
+
+# PostgreSQL（默认驱动 asyncpg）
+DB_URL="postgres://user:password@localhost:5432/fastsoyadmin"
+
+# MySQL / MariaDB
+DB_URL="mysql://root:password@localhost:3306/fastsoyadmin"
+
+# SQL Server
+DB_URL="mssql://sa:Password123@localhost:1433/fastsoyadmin?driver=ODBC%20Driver%2018%20for%20SQL%20Server&encrypt=no&trust_server_certificate=yes"
 ```
 
-架构：Nginx 托管前端静态资源 + 反代 `/api/*` 到 FastAPI；Redis 提供缓存；编排文件在 `docker-compose.yml`，相关 Dockerfile / nginx.conf 在 `/deploy/`。
+URL 语法速查：
 
-### 18.2 手动部署
+| 引擎 | URL 示例 | 说明 |
+|---|---|---|
+| SQLite（相对路径） | `sqlite://app_system.sqlite3?busy_timeout=5000` | **两个斜杠**，相对项目根 |
+| SQLite（绝对路径） | `sqlite:///var/data/db.sqlite3?journal_mode=WAL` | **三个斜杠**，后接绝对路径 |
+| PostgreSQL | `postgres://user:pwd@host:5432/db` | 默认 asyncpg |
+| MySQL | `mysql://user:pwd@host:3306/db` | 需 `aiomysql` 或 `asyncmy` |
+| SQL Server | `mssql://sa:pwd@host:1433/db?driver=ODBC...` | 需 ODBC 驱动 |
 
-- `uv sync --no-dev && uv run granian --interface asgi --workers 4 app:app --host 0.0.0.0 --port 9999`
-- 生产用 Postgres / MySQL + Redis（SQLite 仅开发）
-- 静态资源交给 Nginx；前端构建产物在 `web/dist/`
+驱动安装：`uv add asyncpg` / `uv add asyncmy` / `uv add asyncodbc`。
+
+### 业务模块独立数据库
+
+```python
+# app/business/billing/config.py
+from pydantic_settings import BaseSettings
+
+
+class BillingSettings(BaseSettings):
+    DB_URL: str = "postgres://user:pwd@billing-host:5432/billing"
+    model_config = {"env_file": ".env", "extra": "ignore", "env_prefix": "BILLING_"}
+
+
+BIZ_SETTINGS = BillingSettings()
+```
+
+autodiscover 发现 `DB_URL` 不同于主库时，在 `TORTOISE_ORM` 注册连接 `conn_billing` 并把该模块模型挂到新 app `billing` 下；相同则合并到默认连接。跨模型事务：
+
+```python
+async with in_transaction(get_db_conn(Invoice)):
+    await Invoice.create(...)
+```
+
+每个连接有独立迁移目录：`migrations/app_system/` / `migrations/billing/`。
+
+### 常见坑
+
+- **连接池**：`postgres://...?maxsize=50&minsize=5`
+- **SQLite 并发写**：`sqlite:///data/app.sqlite3?journal_mode=WAL&busy_timeout=5000`
+- **时区**：Tortoise `use_tz=False, timezone=Asia/Shanghai`（默认）；PostgreSQL 建议 `use_tz=True` 并统一 UTC
 
 ---
 
-## 19. 关键端点速查
+## 15. 部署
 
-### 19.1 认证（`/api/v1/auth`，公开）
+### 15.1 Docker Compose（推荐）
 
-| 方法 | 路径 | 说明 |
+```bash
+git clone https://github.com/sleep1223/fast-soy-admin
+cd fast-soy-admin
+docker compose up -d
+```
+
+| 服务 | 端口 | 说明 |
 |---|---|---|
-| POST | `/login` | 用户名密码登录 |
-| POST | `/captcha` | 发送手机验证码 |
-| POST | `/code-login` | 验证码登录 |
-| POST | `/register` | 注册（默认角色 `R_USER`） |
-| POST | `/refresh-token` | 刷新 access token |
-| GET | `/user-info` | 当前用户信息 + 角色 + 按钮（`DependAuth`） |
-| PATCH | `/password` | 修改密码（递增 token 版本） |
-| POST | `/impersonate/{user_id}` | 超管模拟登录 |
+| nginx | 1880 | 前端 + API 反向代理 |
+| app | 9999 | FastAPI 后端 |
+| redis | 6379 | 缓存层 |
 
-### 19.2 路由（`/api/v1/route`）
+### 15.2 日志
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| GET | `/constant-routes` | 公共路由（从 Redis） |
-| GET | `/user-routes` | 当前用户菜单树（`DependAuth`） |
-| GET | `/exists?name=xxx` | 校验路由名是否存在 |
+```bash
+docker compose logs -f          # 所有服务
+docker compose logs -f app      # 仅后端
+make logs                       # == docker compose logs -f
+```
 
-### 19.3 系统管理（`/api/v1/system-manage`，全部 `DependPermission`）
+### 15.3 首次部署（initdb）
 
-所有资源遵循 5.2 标准 6 路由：
+`make up` **不会自动建表**。新库首次启动后端会报 `no such table: ...`——这是预期行为：
 
-| 资源 | 前缀 | 备注 |
-|---|---|---|
-| 用户 | `/users` | create / update 注入密码哈希 + 角色关联 |
-| 角色 | `/roles` | 含 `GET /roles/{id}/menus` 等子资源 |
-| 菜单 | `/menus` | 含 `GET /menus/tree` / `GET /menus/pages` |
-| API | `/apis` | 含 `POST /apis/refresh`（手动触发对账） |
-| 字典 | `/dictionaries` | 含 `GET /dictionaries/{type}/options`（5 分钟 Redis 缓存） |
+```bash
+make up                                                       # 起容器
+docker compose exec app uv run python -m app.cli initdb       # 建表 + 写入基础数据
+docker compose restart app                                    # 让后端重连到已建好的库
+```
 
-### 19.4 业务模块（`/api/v1/business/<name>`）
+注意：
 
-按模块自治。HR 模块的完整路由见 `/api/v1/business/hr/...`（员工、部门、标签）。
+- **`initdb` 必须在容器里跑**，不能在宿主机（宿主机会写到宿主机本地 `app_system.sqlite3`，和容器里是两个文件）
+- `initdb` 只能在**全新库**上跑一次；之后任何模型变更一律走 `migrate`
+- 判断该 `initdb` 还是 `migrate`：`docker compose exec app uv run tortoise history`——报错 / 无输出 → 空库跑 initdb；有历史但不是最新 → 跑 migrate
+
+### 15.4 日常模型变更
+
+推荐流程：**本地生成迁移、提交 git、服务器重建并执行**。
+
+```bash
+# --- 本地 ---
+make makemigrations                 # 生成 migrations/models/*.py
+git add migrations/ app/
+git commit -m "feat(xxx): ..."
+git push
+
+# --- 服务器 ---
+git pull
+docker compose up -d --build app    # 重建包含新代码 + 新迁移文件的镜像
+docker compose exec app uv run tortoise migrate
+docker compose exec app uv run tortoise history   # 确认迁移已应用
+```
+
+为什么不在容器里 `makemigrations`：容器内生成的迁移文件在 `docker compose down` 后会随容器销毁，且不会回流到 git。**迁移文件属于代码，必须在本地生成并入库。**
+
+### 15.5 业务模块 `init_data.init()`
+
+不是迁移——是**每次启动由 Redis leader worker 自动执行**的幂等对账（菜单 / 角色 / API / 业务种子数据）。
+
+- 新增业务模块 / 修改 `init_data.py` 后，`docker compose up -d --build` 即可，**不需要**手动触发
+- 但表结构变更仍要先 `migrate`，`init_data` 依赖表已存在
+
+### 15.6 数据持久化前置检查
+
+默认 `docker-compose.yml` 仅声明 `redis_data` / `static_data` 两个卷，**SQLite 文件没挂卷**（位于容器内 `/opt/fast-soy-admin/app_system.sqlite3`），`docker compose down` 或 `--build` 重建后会丢。生产二选一：
+
+- **切外部数据库**：把 `.env.docker` 里 `DB_URL` 指向外部 Postgres / MySQL
+- **给 SQLite 挂卷**：在 `app` 服务下加 `- sqlite_data:/opt/fast-soy-admin/db`，把 `file_path` 改成 `db/app_system.sqlite3`
+
+### 15.7 回滚
+
+Tortoise 的 `downgrade` 对 SQLite 支持有限，生产回滚推荐：
+
+1. 从备份恢复数据库文件 / 快照
+2. `git revert` 对应的代码 + 迁移提交
+3. `docker compose up -d --build`
+
+**不要**在生产用 `tortoise downgrade` 回滚结构变更。
+
+### 15.8 手动部署
+
+```bash
+# 后端
+uv sync --no-dev
+uvicorn app:app --host 0.0.0.0 --port 9999 --workers 4
+
+# 前端
+cd web && pnpm install && pnpm build
+# dist/ 部署到 Web 服务器
+```
+
+Nginx 示例：
+
+```nginx
+server {
+    listen 80;
+    root /path/to/web/dist;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:9999;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
 
 ---
 
-## 20. 参考
+## 16. 命令参考（Make）
 
-- 源码：https://github.com/sleep1223/fast-soy-admin
-- 文档：https://sleep1223.github.io/fast-soy-admin-docs/
-- API（Apifox）：https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b
-- 前端上游 SoybeanAdmin：https://github.com/soybeanjs/soybean-admin
-- FastAPI：https://fastapi.tiangolo.com/
-- Tortoise ORM：https://tortoise.github.io
+### 后端
+
+| Make 命令 | 作用 |
+|---|---|
+| `make install` | 安装后端依赖（`uv sync`） |
+| `make run` | 启动后端（:9999） |
+| `make lint` | Ruff 检查（不修改） |
+| `make fmt` | Ruff fix + format |
+| `make typecheck` | basedpyright |
+| `make test` | pytest |
+| `make check` | fmt + typecheck + test |
+
+### 数据库
+
+| Make 命令 | 作用 |
+|---|---|
+| `make initdb` | 首次初始化数据库（建表 + 基础数据） |
+| `make makemigrations` | 生成迁移文件 |
+| `make migrate` | 应用所有未执行的迁移 |
+| `make mm` | makemigrations + migrate |
+| `make dbhistory` | 迁移历史 |
+
+### CLI 代码生成
+
+| Make 命令 | 作用 |
+|---|---|
+| `make cli-init MOD=xxx` | 创建业务模块骨架（只含 `models.py`） |
+| `make cli-gen MOD=xxx` | 生成后端 schemas / controllers / api / init_data / services |
+| `make cli-gen-web MOD=xxx CN=中文名` | 生成前端 service / typings / views / i18n 片段 |
+| `make cli-gen-all MOD=xxx CN=中文名` | cli-gen + cli-gen-web |
+
+### 前端
+
+| Make 命令 | 作用 |
+|---|---|
+| `make web-install` | 安装前端依赖 |
+| `make web-dev` | 启动前端（:9527） |
+| `make web-build` | 生产构建 |
+| `make web-lint` | ESLint + oxlint |
+| `make web-typecheck` | vue-tsc |
+| `make web-check` | web-lint + web-typecheck |
+
+### 全栈
+
+| Make 命令 | 作用 |
+|---|---|
+| `make install-all` | 同时安装后端 + 前端依赖 |
+| `make dev` | 同时启动后端（:9999）和前端（:9527） |
+| `make check-all` | 后端 + 前端全部质量检查（提交前必跑） |
+
+### Docker
+
+| Make 命令 | 作用 |
+|---|---|
+| `make up` | `docker compose up -d` |
+| `make rebuild` | `docker compose up -d --build` |
+| `make down` | 停止并移除容器 |
+| `make logs` | 实时查看日志 |
+
+---
+
+## 17. 强制约定清单（PR review checklist）
+
+1. 必须用 `Success` / `SuccessExtra` / `Fail`；不要返回裸 dict、不要手拼 snake_case
+2. 业务 schema 继承 `SchemaBase`；分页继承 `PageQueryBase`；ID 用 `SqidId` / `SqidPath`；整型用 `Int16 / 32 / 64`；Update schema 用 `make_optional`
+3. 标准 6 路由必须 `CRUDRouter`；自定义用 `@crud.override`；不要绕过 `_OrderedRouter`
+4. `controllers` / `services` 不要 import `fastapi.Request` / `Response`
+5. 写接口必须挂按钮权限；业务角色种子必须**显式** `data_scope`
+6. 不要靠"前端隐藏按钮"做安全；不要在业务里直接判 `role_code == "..."`（用 `has_role_code` / `has_button_code`）
+7. 模型继承 `BaseModel + AuditMixin`；文件头 `# pyright: reportIncompatibleVariableOverride=false`；字段加 `description="..."`；类 docstring 写中文名；`Meta.table = biz_<module>_<entity>`；每个 `ForeignKeyField` / `OneToOneField` 上方显式声明 `<name>_id: int`（或 `int | None`）注解；创建 / 更新 / 比较一律用 `obj.<name>_id`
+8. 业务模块 import 入口统一 `from app.utils import ...`
+9. 跨业务模块联动用事件总线（`emit` / `on`），不要直接 import 兄弟模块
+10. 事务用 `in_transaction(get_db_conn(Model))`；**不要**硬编码连接名；事务内**不要**做 HTTP / Redis / 队列
+11. 不要 `raise HTTPException`；用 `BizError` / `SchemaValidationError`
+12. 业务自有缓存按 `<module>_<resource>:<scope>` 命名，读 → miss → 查 → 写 TTL，变更时主动失效；不要给分页接口加全局 `@cache(...)`
+13. 关键节点 / 权限拒绝用 `radar_log(...)`；高频调试 `log.debug`；不要 `print(...)`
+14. 所有函数加类型注解；`make check-all` 必须全绿（ruff + basedpyright + pytest + eslint + oxlint + vue-tsc）
+
+---
+
+## 18. 配置
+
+### 18.1 后端 `.env`
+
+- `SECRET_KEY` — JWT + Sqids 字母表派生
+- `DB_URL` — 数据库连接
+- `REDIS_URL` — Redis 连接
+- `CORS_ORIGINS` — CORS 白名单
+- `APP_DEBUG` — 开启则返回详细异常栈
+- `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` / `JWT_REFRESH_TOKEN_EXPIRE_DAYS`
+- `GUARD_ENABLED` / `GUARD_*` — fastapi-guard 配置
+- `PROXY_HEADERS_ENABLED` / `TRUSTED_HOSTS` — 反代头还原
+- `LOG_INFO_RETENTION` — 日志保留
+
+`.env.docker` 同上，变量为容器视角（`DB_URL` 默认 SQLite、`REDIS_URL=redis://redis:6379/0`）。
+
+### 18.2 前端 `.env`
+
+- `VITE_SERVICE_BASE_URL` — API 根路径
+- `VITE_SERVICE_SUCCESS_CODE` / `VITE_SERVICE_LOGOUT_CODES` / `VITE_SERVICE_MODAL_LOGOUT_CODES` / `VITE_SERVICE_EXPIRED_TOKEN_CODES`
+- `VITE_OTHER_SERVICE_BASE_URL` — 可选附加后端
+- `VITE_AUTH_ROUTE_MODE` — `static` / `dynamic`（默认 `dynamic`）
+
+### 18.3 工具链配置
+
+- `ruff.toml` — 行宽 200，规则 E / F / I，双引号
+- `pyproject.toml` 的 `[tool.basedpyright]` — `app/` 启用 standard 模式
+- 前端：`@soybeanjs/eslint-config-vue` + oxlint + vue-tsc
+
+---
+
+## 19. FAQ（浓缩版）
+
+### 启动 & 安装
+
+- **`python run.py` 报 "no such table"**：首次必须 `make initdb`（或 `make mm`）。启动不会自动建表。
+- **Redis 连接失败**：`redis-cli ping` 应返回 `PONG`。临时用本地：`REDIS_URL=redis://localhost:6379/0`。
+- **端口被占用**：后端 9999 / 前端 9527 / Nginx 1880。改 `run.py` 或 `web/vite.config.ts`。
+
+### 模块开发
+
+- **重启后我手动建的菜单 / 按钮被清掉了**：`init_data.py` 调了 `reconcile_menu_subtree(...)`——该子树进入 IaC 模式，只接受声明式菜单。想允许动态创建就不要对该子树调 reconcile。
+- **启动日志报 `ensure_role 'XXX': missing apis [...]`**：声明的 `(method, path)` 在 `Api` 表里找不到。通常是路由被改了或拼错（method 必须小写）。看到必须修。
+- **删了 init_data 里的角色，DB 中的 Role 还在**：`ensure_role` 是 upsert，不会自动删；删除走数据库迁移。
+- **业务模块新加的但路由没挂**：检查 `api/__init__.py` 是否导出 `router: APIRouter`。
+- **临时屏蔽某个业务模块**：`mv app/business/inventory app/business/_inventory`。
+- **CLI 生成的代码里 `// TODO`**：外键 / 自定义枚举的下拉数据源无法自动推导，搜 TODO 补齐 `fetchGetXxxList`。
+
+### 权限
+
+- **改了角色 / 菜单后用户没刷出权限**：权限走 Redis 缓存，CUD 后主动 `load_role_permissions` / `load_user_roles`，或直接重启。
+- **用户被踢但 token 还能用**：调 `invalidate_user_session(redis, user_id)`，会 `INCR token_version:{uid}`，旧 token 下次请求返 `2106`。
+- **业务接口权限拒绝（`2201`）但角色已挂菜单**：菜单和 API 是两个维度，角色 seed 必须同时给 `menus` 和 `apis`。
+- **部门主管看到了全公司的数据**：`data_scope` 没显式声明（默认 `all`）。种子里必须显式 `DataScopeType.department`。
+
+### 前端路由
+
+- **修改 `.env` 不生效**：重启 Vite dev server。
+- **路由不在菜单中显示**：检查 `hide_in_menu=True`，或后端没给当前角色加这个 `route_name`。
+- **静态 vs 动态路由**：`VITE_AUTH_ROUTE_MODE=static`（前端自定义）/`dynamic`（默认，调 `/api/v1/route/user-routes`）。
+- **生产 404**：Nginx 配 `try_files $uri $uri/ /index.html;`。
+
+### API ID
+
+- **前端拿到字符串 `Yc7vN3kE` 不是数字**：那是 sqid，对外 ID 一律 sqid。前端原样发回后端即可（`SqidPath` / `SqidId` 自动解码）。
+- **测试里发数字 ID 也通过了？**：兼容期允许——`SqidId._sqid_to_int` 同时接受 int / 数字字符串 / sqid。迁移完成后可收紧。
+- **部署后所有外部 sqid 链接都失效**：`SECRET_KEY` 被换了（sqid 字母表由 SECRET_KEY 派生）。
+
+### 部署
+
+- **容器里所有请求都被 guard 误封**：部署在 Nginx 后没开反代头还原。加 `PROXY_HEADERS_ENABLED=true` 和 `TRUSTED_HOSTS=["10.0.0.0/8"]`。
+- **切换数据库后启动报 "module not found: asyncpg"**：主库引擎没装对应驱动，`uv add asyncpg / asyncmy / asyncodbc`。
+- **多 worker 启动后菜单 / 用户重复创建？**：不会。`_run_init_data` 通过 Redis 锁 `app:init_lock` 选 leader，只有 leader 跑 init。
+- **容器内时区不对**：Tortoise 默认 `use_tz=False, timezone=Asia/Shanghai`。改成 UTC 需在 `app/core/config.py` 改 `TORTOISE_ORM["use_tz"]=True` 并 `timezone="UTC"`。
+
+---
+
+## 20. 规范速查
+
+| 类型 | 规则 |
+|---|---|
+| 文件名 | snake_case（如 `user_service.py`、`employee_search.vue`） |
+| 类 / 枚举 | PascalCase |
+| 函数 / 变量 | snake_case（Python） / camelCase（TS） |
+| URL 路径 | 资源名复数、kebab-case（`/batch-offline`） |
+| 角色码 | `R_<MODULE>_<ROLE>`（如 `R_HR_ADMIN`） |
+| 按钮码 | `B_<MODULE>_<RESOURCE>_<ACTION>`（如 `B_HR_EMP_CREATE`） |
+| 事件名 | `<domain>.<entity>.<action>`（如 `hr.employee.created`） |
+| 路由名 | 后端 `ensure_menu` 的 `route_name`，全局唯一（如 `hr_employee`） |
+| 前端 view 组件 | `view.<route_name>`（如 `view.hr_employee`） |
+| DB 表 | 业务表 `biz_<module>_<entity>`；系统表沿用 `user` / `role` 等 |
+| 业务缓存 Key | `<module>_<resource>:<scope>` |
+
+---
+
+## 21. 前端代码同步说明
+
+`web/` 目录源码由独立仓库 [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend) 维护，与本仓库**没有共同祖先**。同步上游更新需手动走 `git subtree` 流程。历史可查：`git log --oneline --grep="chore(web): sync with fast-soy-admin-frontend"`。
