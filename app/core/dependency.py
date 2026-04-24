@@ -2,6 +2,7 @@ from typing import Any
 
 import jwt
 from fastapi import Depends, Request
+from fastapi.routing import APIRoute
 from fastapi.security import OAuth2PasswordBearer
 from jwt.types import Options as JwtOptions
 
@@ -11,7 +12,6 @@ from app.core.config import APP_SETTINGS
 from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_BUTTON_CODES, CTX_IMPERSONATOR_ID, CTX_ROLE_CODES, CTX_USER, CTX_USER_ID, CTX_X_REQUEST_ID
 from app.core.exceptions import BizError
-from app.core.tools import check_url
 from app.system.models import StatusType, User
 from app.system.radar.ctx import CTX_RADAR
 from app.system.radar.developer import radar_log
@@ -107,24 +107,35 @@ class PermissionControl:
             raise BizError(code=Code.USER_NO_ROLE, msg="该用户未绑定角色")
 
         method = request.method.lower()
-        path = request.url.path
+        request_path = request.url.path
+        # 以 FastAPI 匹配到的路由模板（path_format）为准，与 refresh_api_list() 入库键保持一致，
+        # 避免用正则把 "/resources/{id}" 误匹配到 "/resources/sync" 这类静态兄弟路径。
+        route = request.scope.get("route")
+        if not isinstance(route, APIRoute):
+            radar_log("权限拒绝(无匹配路由)", level="ERROR", data={"method": method.upper(), "path": request_path, "xRequestId": CTX_X_REQUEST_ID.get()})
+            raise BizError(code=Code.PERMISSION_DENIED, msg=f"权限不足，method: {method} path: {request_path}")
+        matched_path = route.path_format
         redis = request.app.state.redis
 
-        # 从 Redis 汇总所有角色的 API 权限
-        permission_apis: set[tuple[str, str, str]] = set()
+        # 从 Redis 汇总所有角色的 API 权限，按 (method, path_format) 精确索引
+        permission_status: dict[tuple[str, str], str] = {}
         for role_code in role_codes:
             apis = await get_role_apis(redis, role_code)
             for api in apis:
-                permission_apis.add((api["method"], api["path"], api["status"]))
+                key = (api["method"], api["path"])
+                # 同一 (method, path) 若跨角色出现多次，启用态优先
+                prev = permission_status.get(key)
+                if prev != StatusType.enable.value:
+                    permission_status[key] = api["status"]
 
-        for api_method, api_path, api_status in permission_apis:
-            if api_method == method and check_url(api_path, path):
-                if api_status == StatusType.disable.value:
-                    raise BizError(code=Code.API_DISABLED, msg=f"该接口已被禁用，method: {method} path: {path}")
-                return
+        status = permission_status.get((method, matched_path))
+        if status is not None:
+            if status == StatusType.disable.value:
+                raise BizError(code=Code.API_DISABLED, msg=f"该接口已被禁用，method: {method} path: {matched_path}")
+            return
 
-        radar_log("权限拒绝", level="ERROR", data={"method": method.upper(), "path": path, "xRequestId": CTX_X_REQUEST_ID.get()})
-        raise BizError(code=Code.PERMISSION_DENIED, msg=f"权限不足，method: {method} path: {path}")
+        radar_log("权限拒绝", level="ERROR", data={"method": method.upper(), "path": matched_path, "xRequestId": CTX_X_REQUEST_ID.get()})
+        raise BizError(code=Code.PERMISSION_DENIED, msg=f"权限不足，method: {method} path: {matched_path}")
 
 
 DependAuth = Depends(AuthControl.is_authed)

@@ -9,13 +9,6 @@ VIEW_PREFIX = "view."
 FIRST_LEVEL_ROUTE_COMPONENT_SPLIT = "$"
 
 
-def check_url(url: str = "/api/v1/system-manage/roles/{role_id}/buttons", url2: str = "/api/v1/system-manage/roles/1/buttons") -> bool:
-    pattern = re.sub(r"\{.*?}", "[^/]+", url)
-    if re.match(pattern, url2):
-        return True
-    return False
-
-
 def get_layout_and_page(component=None):
     layout = ""
     page = ""
