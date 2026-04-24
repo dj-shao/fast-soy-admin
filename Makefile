@@ -117,6 +117,10 @@ check-all: check web-check ## Run all quality gates (backend + frontend)
 up: ## Docker compose up (nginx + fastapi + redis)
 	docker compose up -d
 
+.PHONY: rebuild
+rebuild: ## Docker compose rebuild images and recreate containers
+	docker compose up -d --build
+
 .PHONY: down
 down: ## Docker compose down
 	docker compose down
