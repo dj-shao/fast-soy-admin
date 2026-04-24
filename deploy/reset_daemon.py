@@ -1,4 +1,7 @@
-"""循环重建：每 10 分钟清空所有表并重新执行完整启动初始化流程。
+"""循环重建数据库的 daemon：每 10 分钟清空所有表并重新执行完整启动初始化流程。
+
+以独立容器形式常驻运行（见 docker-compose.yml 的 `reset_daemon` 服务, profile=reset）。
+容器内 while True + sleep(600) 自循环; 异常退出由 docker `restart: unless-stopped` 拉起。
 
 初始化顺序对齐 app/__init__.py 的 _run_init_data：
     init_menus -> refresh_api_list -> init_users -> 业务模块 init_data.init() -> refresh_all_cache

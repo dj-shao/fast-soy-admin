@@ -39,18 +39,20 @@ services:
     volumes:
       - redis_data:/data
 
-  # Optional: run with `docker compose --profile cron up -d`
-  # View logs: `docker compose --profile cron logs -f cron_reset`
-  cron_reset:
+  # 循环重建数据库的 daemon: 每 10 分钟清空所有表并重跑完整初始化。
+  # 仅演示/压测用, 默认通过 profile 隔离不启动; 需要时执行:
+  #   docker compose --profile reset up -d
+  #   docker compose --profile reset logs -f reset_daemon
+  reset_daemon:
     build:
       context: .
       dockerfile: deploy/app.Dockerfile
-    command: ["uv", "run", "cron_reset.py"]
+    command: ["uv", "run", "deploy/reset_daemon.py"]
     depends_on:
       - app
     restart: unless-stopped
     profiles:
-      - cron
+      - reset
     networks:
       - internal
 
