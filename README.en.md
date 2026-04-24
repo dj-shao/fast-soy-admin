@@ -193,9 +193,12 @@ See [response codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/
 
 ## Screenshots
 
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-01.png)
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-04.png)
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-07.png)
+![Home - Chinese](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/home-zh.png)
+![Home - English](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/home-en.png)
+![Radar - Dashboard](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-dashboard.png)
+![Radar - Requests](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-requests.png)
+![Radar - SQL](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-sql.png)
+![Radar - Exceptions](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-exceptions.png)
 
 ## TODO
 

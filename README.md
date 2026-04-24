@@ -193,9 +193,12 @@ uv sync --extra oracle       # Oracle (asyncodbc)
 
 ## 示例图片
 
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-01.png)
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-04.png)
-![](https://soybeanjs-1300612522.cos.ap-guangzhou.myqcloud.com/uPic/soybean-admin-v1-07.png)
+![首页-中文](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/home-zh.png)
+![首页-英文](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/home-en.png)
+![性能监控-仪表盘](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-dashboard.png)
+![性能监控-请求列表](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-requests.png)
+![性能监控-SQL查询](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-sql.png)
+![性能监控-异常列表](https://sleep1223.github.io/fast-soy-admin-docs/screenshots/radar-exceptions.png)
 
 ## TODO
 
