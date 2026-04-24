@@ -9,9 +9,12 @@
 支持 sqlite / postgres / mysql / mssql —— 按连接的 `capabilities.dialect` 自动分派。
 """
 
+import asyncio
+import os
 import time
 from typing import Any
 
+import httpx
 from loguru import logger
 from tortoise import Tortoise, run_async
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -22,6 +25,10 @@ from app.core.config import APP_SETTINGS
 from app.core.redis import close_redis, init_redis
 from app.system.api.utils import refresh_api_list
 from app.system.init_data import init_menus, init_users
+
+_APP_BASE_URL = os.getenv("RESET_DAEMON_APP_URL", "http://app:9999")
+_SEED_USER = os.getenv("RESET_DAEMON_USER", "Soybean")
+_SEED_PASSWORD = os.getenv("RESET_DAEMON_PASSWORD", "123456")
 
 _KEEP_TABLES = {"tortoise_migrations"}
 
@@ -80,6 +87,71 @@ async def _truncate(conn: BaseDBAsyncClient, dialect: str, tables: list[str]) ->
         raise RuntimeError(f"unsupported dialect: {dialect}")
 
 
+async def _populate_radar_data(base_url: str) -> None:
+    """初始化完成后向后端发起若干请求，让 Radar 监控有数据。
+
+    - 登录获取 JWT
+    - 多次调用部门列表接口（有效请求，生成性能监控数据）
+    - 调用 /__radar/api/_boom 触发未捕获异常（需 APP_DEBUG=true）
+    - 请求一个不存在的业务路径（生成 404 记录）
+    """
+    async with httpx.AsyncClient(base_url=base_url, timeout=10.0) as client:
+        # 等待 app /health 就绪（最长 ~60s）
+        for _ in range(60):
+            try:
+                r = await client.get("/health", timeout=2.0)
+                if r.status_code == 200:
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(1)
+        else:
+            logger.warning(f"radar populate: /health not ready after 60s (base_url={base_url})")
+            return
+
+        try:
+            resp = await client.post(
+                "/api/v1/auth/login",
+                json={"userName": _SEED_USER, "password": _SEED_PASSWORD},
+            )
+            payload = resp.json()
+            token = (payload.get("data") or {}).get("token")
+        except Exception:
+            logger.exception(f"radar populate: login failed (base_url={base_url})")
+            return
+
+        if not token:
+            logger.warning(f"radar populate: login returned no token: {payload}")
+            return
+
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 正常请求：部门列表搜索（构造不同分页参数制造多条数据）
+        for current, size in [(1, 10), (1, 5), (2, 10)]:
+            try:
+                await client.post(
+                    "/api/v1/business/hr/departments/search",
+                    headers=headers,
+                    json={"current": current, "size": size, "name": None, "code": None, "status": None},
+                )
+            except Exception:
+                logger.exception("radar populate: departments/search failed")
+
+        # 触发未捕获异常
+        for kind in ("runtime", "zero", "key", "attr"):
+            try:
+                await client.get("/__radar/api/_boom", params={"kind": kind}, headers=headers)
+            except Exception:
+                # boom 会返回 500，httpx 不抛；真正网络错误才落入此处
+                logger.exception(f"radar populate: _boom({kind}) failed")
+
+        # 404：不存在的业务路径
+        try:
+            await client.get("/api/v1/business/hr/departments/not-exist-xxx", headers=headers)
+        except Exception:
+            logger.exception("radar populate: 404 probe failed")
+
+
 async def reset_once() -> None:
     await Tortoise.init(config=APP_SETTINGS.TORTOISE_ORM)
     await Tortoise.generate_schemas()
@@ -106,6 +178,8 @@ async def reset_once() -> None:
     finally:
         await close_redis(redis)
         await Tortoise.close_connections()
+
+    await _populate_radar_data(_APP_BASE_URL)
 
 
 if __name__ == "__main__":
