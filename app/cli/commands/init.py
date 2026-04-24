@@ -37,9 +37,11 @@ from app.utils import AuditMixin, BaseModel, StatusType
 #
 #     # 外键规范：必须在 FK 字段上方声明 <name>_id: int（非空）或 int | None（可空）
 #     # 使用时创建/更新/比较一律用 parent_id，访问关系对象字段前先 prefetch_related("parent")。
+#     # 关联模型字符串使用 "app_system.<Model>"（默认情况下业务模块模型都注册到 app_system）；
+#     # 仅当本模块在 config.py 声明了独立 DB_URL 时，才改用 "app_{module_name}.<Model>"。
 #     # parent_id: int | None
 #     # parent: fields.ForeignKeyNullableRelation["Example"] = fields.ForeignKeyField(
-#     #     "app_{module_name}.Example", null=True, related_name="children", description="父节点",
+#     #     "app_system.Example", null=True, related_name="children", description="父节点",
 #     # )
 #
 #     class Meta:

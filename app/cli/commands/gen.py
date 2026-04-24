@@ -22,11 +22,11 @@ GUIDE_TEXT = """\
   \033[1m2.\033[0m 按需修改 \033[36minit_data.py\033[0m 添加菜单、角色、种子数据
   \033[1m3.\033[0m 执行数据库迁移：
 
-     \033[36mtortoise makemigrations && tortoise migrate\033[0m
+     \033[36mmake mm\033[0m
 
   \033[1m4.\033[0m 启动服务验证：
 
-     \033[36mpython run.py\033[0m
+     \033[36mmake dev\033[0m
 """
 
 
