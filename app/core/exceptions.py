@@ -56,10 +56,20 @@ async def BaseHandle(req: Request, exc: Exception, handle_exc, code: int | str, 
         request_body = {}
 
     request_input = {"path": req.url.path, "query": req.query_params._dict, "body": request_body, "headers": dict(req.headers)}
-    data = {"xRequestId": x_request_id, "input": request_input, **kwargs}
-    content = {"code": str(code), "msg": msg, "data": data}
+
+    try:
+        from app.system.radar.developer import radar_log
+
+        radar_log(
+            f"异常响应: code={code} msg={msg}",
+            level="ERROR",
+            data={"xRequestId": x_request_id, "input": request_input, **kwargs},
+        )
+    except Exception:
+        pass
+
     if isinstance(exc, handle_exc):
-        return JSONResponse(content=content, status_code=status_code)
+        return JSONResponse(content={"code": str(code), "msg": msg, "data": None}, status_code=status_code)
     else:
         return JSONResponse(content={"code": str(code), "msg": f"Exception handler Error, exc: {exc}", "data": None}, status_code=status_code)
 
