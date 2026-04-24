@@ -26,13 +26,19 @@ dependencies = [
   "python-multipart>=0.0.26",
 ]
 
+[project.optional-dependencies]
+mysql = ["tortoise-orm[asyncmy]>=1.1.7"]
+postgres = ["tortoise-orm[asyncpg]>=1.1.7"]
+mssql = ["tortoise-orm[asyncodbc]>=1.1.7"]
+oracle = ["tortoise-orm[asyncodbc]>=1.1.7"]
+
 [dependency-groups]
 dev = [
-    "pytest>=8.0",
-    "pytest-asyncio>=0.24",
-    "httpx>=0.28.1",
-    "fakeredis>=2.35.0",
-    "basedpyright>=1.39",
+  "pytest>=8.0",
+  "pytest-asyncio>=0.24",
+  "httpx>=0.28.1",
+  "fakeredis>=2.35.0",
+  "basedpyright>=1.39",
 ]
 
 [tool.pytest.ini_options]
