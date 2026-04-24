@@ -29,15 +29,7 @@ Int64 = Annotated[int, Field(ge=-9_223_372_036_854_775_808, le=9_223_372_036_854
 
 
 def _sqid_to_int(v: Any) -> int:
-    # 接受 int / 纯数字串 / sqid 三种形式：
-    # - 迁移期内仍允许前端/旧测试发送数字 id，避免一次性 break。
-    # - 迁移完成后可在此收紧为仅接受 sqid。
-    if isinstance(v, int):
-        return v
-    s = str(v)
-    if s.lstrip("-").isdigit():
-        return int(s)
-    return decode_id(s)
+    return decode_id(str(v))
 
 
 # 请求/响应两端均走 sqid 字符串；校验时把 sqid 解成 int，JSON 序列化时再编回 sqid。

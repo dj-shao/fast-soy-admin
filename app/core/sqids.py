@@ -33,10 +33,8 @@ def encode_id(v: int) -> str:
     return _sqids.encode([v])
 
 
-def decode_id(s: str | int) -> int:
-    """sqid 字符串 → int；已是 int 时原样返回，便于双向兼容。"""
-    if isinstance(s, int):
-        return s
+def decode_id(s: str) -> int:
+    """sqid 字符串 → int。"""
     nums = _sqids.decode(s)
     if len(nums) != 1:
         raise ValueError(f"invalid sqid: {s!r}")

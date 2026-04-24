@@ -93,7 +93,7 @@ class MenuBase(SchemaBase):
     route_path: Annotated[str, Field(max_length=200)] | None = Field(None, title="路由路径")
 
     path_param: Annotated[str, Field(max_length=200)] | None = Field(None, description="路径参数")
-    route_param: list[dict[str, Any]] = Field(default_factory=list, alias="query", description="路由参数列表")
+    route_param: list[dict[str, Any]] = Field(default_factory=list, description="路由参数列表")
     by_menu_buttons: list[ButtonBase] = Field(default_factory=list, description="按钮列表")
     order: Int32 | None = Field(None, description="菜单顺序")
     component: Annotated[str, Field(max_length=100)] | None = Field(None, description="路由组件")

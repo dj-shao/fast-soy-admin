@@ -33,9 +33,7 @@ except ImportError:
 
 # 用于协调多 worker 启动初始化的 Redis 键。
 # 以 Granian 主进程 PID（所有 worker 的父进程）作为部署代次标识：
-# 同一次部署下所有 worker 看到相同的 key，不同部署自然隔离，
-# 避免了 "delete then set NX" 的竞态（旧代码在多 worker 下有概率让多个 worker 同时成为 leader，
-# 触发 SQLite "database is locked"）。
+# 同一次部署下所有 worker 看到相同的 key，不同部署自然隔离。
 _BOOT_ID = os.getppid()
 _INIT_LOCK_KEY = f"app:init_lock:{_BOOT_ID}"
 _INIT_DONE_KEY = f"app:init_done:{_BOOT_ID}"
@@ -142,8 +140,6 @@ async def lifespan(_app: FastAPI):
     _app.state.redis = await init_redis()
     FastAPICache.init(RedisBackend(_app.state.redis), prefix="fastapi-cache")
     try:
-        # 锁的 key 已按主进程 PID 隔离（见 _BOOT_ID），无需在此显式清理——
-        # 直接进入 leader 选举；旧部署遗留的 key 会随 TTL 自然过期。
         is_leader = await _run_init_data(_app)
 
         if APP_SETTINGS.RADAR_ENABLED:

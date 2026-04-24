@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.code import Code
+from app.core.sqids import encode_id
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -42,7 +43,7 @@ class TestDepartmentCRUD:
         assert any(r["name"] == "Engineering" for r in records)
 
     async def test_get_department(self, auth_client: AsyncClient, hr_data):
-        dept_id = hr_data["department"].id
+        dept_id = encode_id(hr_data["department"].id)
         resp = await auth_client.get(f"{PREFIX}/departments/{dept_id}")
         assert resp.status_code == 200
         data = resp.json()
@@ -50,7 +51,7 @@ class TestDepartmentCRUD:
         assert data["data"]["code"] == "ENG"
 
     async def test_update_department(self, auth_client: AsyncClient, hr_data):
-        dept_id = hr_data["department"].id
+        dept_id = encode_id(hr_data["department"].id)
         resp = await auth_client.patch(
             f"{PREFIX}/departments/{dept_id}",
             json={"description": "Updated description"},
@@ -102,7 +103,7 @@ class TestTagCRUD:
         assert len(data["data"]["records"]) >= 2  # Python, JavaScript from seed
 
     async def test_get_tag(self, auth_client: AsyncClient, hr_data):
-        tag_id = hr_data["tags"][0].id
+        tag_id = encode_id(hr_data["tags"][0].id)
         resp = await auth_client.get(f"{PREFIX}/tags/{tag_id}")
         assert resp.status_code == 200
         data = resp.json()
@@ -110,7 +111,7 @@ class TestTagCRUD:
         assert data["data"]["name"] == "Python"
 
     async def test_update_tag(self, auth_client: AsyncClient, hr_data):
-        tag_id = hr_data["tags"][0].id
+        tag_id = encode_id(hr_data["tags"][0].id)
         resp = await auth_client.patch(
             f"{PREFIX}/tags/{tag_id}",
             json={"description": "Programming language"},
@@ -152,7 +153,7 @@ class TestEmployeeCRUD:
         assert "tagNames" in emp
 
     async def test_list_employees_filter_by_department(self, auth_client: AsyncClient, hr_data):
-        dept_id = hr_data["department"].id
+        dept_id = encode_id(hr_data["department"].id)
         resp = await auth_client.post(
             f"{PREFIX}/employees/search",
             json={"current": 1, "size": 10, "departmentId": dept_id},
@@ -163,7 +164,7 @@ class TestEmployeeCRUD:
 
     async def test_create_employee(self, auth_client: AsyncClient, hr_data):
         """Create employee — auto-creates system user."""
-        dept_id = hr_data["department"].id
+        dept_id = encode_id(hr_data["department"].id)
         resp = await auth_client.post(
             f"{PREFIX}/employees",
             json={
@@ -194,14 +195,14 @@ class TestEmployeeCRUD:
         assert resp.json()["code"] == Code.HR_DEPARTMENT_REQUIRED
 
     async def test_get_employee(self, auth_client: AsyncClient, hr_data):
-        emp_id = hr_data["employee"].id
+        emp_id = encode_id(hr_data["employee"].id)
         resp = await auth_client.get(f"{PREFIX}/employees/{emp_id}")
         assert resp.status_code == 200
         assert resp.json()["code"] == "0000"
 
     async def test_update_employee(self, auth_client: AsyncClient, hr_data):
-        emp_id = hr_data["employee"].id
-        tag_ids = [t.id for t in hr_data["tags"]]
+        emp_id = encode_id(hr_data["employee"].id)
+        tag_ids = [encode_id(t.id) for t in hr_data["tags"]]
         resp = await auth_client.patch(
             f"{PREFIX}/employees/{emp_id}",
             json={"position": "Senior Engineer", "tagIds": tag_ids},
@@ -210,11 +211,11 @@ class TestEmployeeCRUD:
         assert resp.json()["code"] == "0000"
 
     async def test_update_employee_too_many_tags(self, auth_client: AsyncClient, hr_data):
-        emp_id = hr_data["employee"].id
+        emp_id = encode_id(hr_data["employee"].id)
         # MAX_TAGS_PER_EMPLOYEE default is 10, send 11 fake ids
         resp = await auth_client.patch(
             f"{PREFIX}/employees/{emp_id}",
-            json={"tagIds": list(range(1, 12))},
+            json={"tagIds": [encode_id(i) for i in range(1, 12)]},
         )
         assert resp.status_code == 200
         assert resp.json()["code"] == Code.HR_TAGS_EXCEED_LIMIT
@@ -236,8 +237,8 @@ class TestManagerOperations:
 
     async def test_edit_subordinate_tags(self, auth_client: AsyncClient, hr_data):
         """Manager edits a subordinate's tags."""
-        emp_id = hr_data["employee"].id
-        tag_ids = [t.id for t in hr_data["tags"]]
+        emp_id = encode_id(hr_data["employee"].id)
+        tag_ids = [encode_id(t.id) for t in hr_data["tags"]]
         resp = await auth_client.patch(
             f"{PREFIX}/department/employees/{emp_id}/tags",
             json={"tagIds": tag_ids},
@@ -248,8 +249,8 @@ class TestManagerOperations:
     async def test_edit_tags_employee_not_in_dept(self, auth_client: AsyncClient, hr_data):
         """Editing tags of an employee not in the manager's department fails."""
         resp = await auth_client.patch(
-            f"{PREFIX}/department/employees/99999/tags",
-            json={"tagIds": [hr_data["tags"][0].id]},
+            f"{PREFIX}/department/employees/{encode_id(99999)}/tags",
+            json={"tagIds": [encode_id(hr_data["tags"][0].id)]},
         )
         assert resp.status_code == 200
         assert resp.json()["code"] == Code.HR_EMPLOYEE_NOT_IN_DEPT
@@ -271,7 +272,7 @@ class TestPersonalOperations:
 
     async def test_my_tags(self, auth_client: AsyncClient, hr_data):
         """Edit own tags."""
-        tag_ids = [hr_data["tags"][0].id]
+        tag_ids = [encode_id(hr_data["tags"][0].id)]
         resp = await auth_client.patch(
             f"{PREFIX}/my/tags",
             json={"tagIds": tag_ids},

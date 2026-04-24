@@ -2,16 +2,17 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.code import Code
+from app.core.sqids import encode_id
 from app.system.models import Menu
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
 @pytest.fixture
-async def home_menu_id(seed_data) -> int:
+async def home_menu_id(seed_data) -> str:
     menu = await Menu.filter(route_name="home").first()
     assert menu is not None
-    return menu.id
+    return encode_id(menu.id)
 
 
 class TestRoleList:
@@ -46,7 +47,7 @@ class TestRoleList:
 
 
 class TestRoleCRUD:
-    async def test_create_role(self, auth_client: AsyncClient, home_menu_id: int):
+    async def test_create_role(self, auth_client: AsyncClient, home_menu_id: str):
         resp = await auth_client.post(
             "/api/v1/system-manage/roles",
             json={
@@ -61,7 +62,7 @@ class TestRoleCRUD:
         assert data["code"] == "0000"
         assert "createdId" in data["data"]
 
-    async def test_create_role_duplicate_code(self, auth_client: AsyncClient, home_menu_id: int):
+    async def test_create_role_duplicate_code(self, auth_client: AsyncClient, home_menu_id: str):
         # R_SUPER already exists
         resp = await auth_client.post(
             "/api/v1/system-manage/roles",
@@ -81,13 +82,13 @@ class TestRoleCRUD:
 
         role = await role_controller.get_by_code("R_SUPER")
         assert role is not None
-        resp = await auth_client.get(f"/api/v1/system-manage/roles/{role.id}")
+        resp = await auth_client.get(f"/api/v1/system-manage/roles/{encode_id(role.id)}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["code"] == "0000"
         assert data["data"]["roleCode"] == "R_SUPER"
 
-    async def test_update_role(self, auth_client: AsyncClient, home_menu_id: int):
+    async def test_update_role(self, auth_client: AsyncClient, home_menu_id: str):
         # Create a role first
         create_resp = await auth_client.post(
             "/api/v1/system-manage/roles",
@@ -110,7 +111,7 @@ class TestRoleCRUD:
         data = resp.json()
         assert data["code"] == "0000"
 
-    async def test_delete_role(self, auth_client: AsyncClient, home_menu_id: int):
+    async def test_delete_role(self, auth_client: AsyncClient, home_menu_id: str):
         # Create a role first
         create_resp = await auth_client.post(
             "/api/v1/system-manage/roles",
