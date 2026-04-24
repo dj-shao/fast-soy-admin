@@ -73,7 +73,25 @@ def _make_guard_config():
 
 
 def make_middlewares():
+    # 中间件顺序：列表第一个为最外层。
+    # - RequestIDMiddleware 需要最外，保证 x_request_id 在所有内层（包括 Radar）都可读。
+    # - RadarMiddleware 必须在 PrettyErrorsMiddleware 外层，这样 PrettyErrors 把未捕获异常转换成 5001
+    #   JSONResponse 后，响应体 / 状态码才会回流经 Radar 的 send_wrapper 被采集到。
     middleware = [
+        Middleware(RequestIDMiddleware),
+        Middleware(
+            CORSMiddleware,
+            allow_origins=APP_SETTINGS.CORS_ORIGINS,
+            allow_credentials=APP_SETTINGS.CORS_ALLOW_CREDENTIALS,
+            allow_methods=APP_SETTINGS.CORS_ALLOW_METHODS,
+            allow_headers=APP_SETTINGS.CORS_ALLOW_HEADERS,
+        ),
+        Middleware(BackGroundTaskMiddleware),
+    ]
+    if APP_SETTINGS.RADAR_ENABLED:
+        middleware.append(Middleware(RadarMiddleware))
+
+    middleware.append(
         Middleware(
             PrettyErrorsMiddleware,
             line_number_first=True,
@@ -84,17 +102,9 @@ def make_middlewares():
             truncate_code=True,
             display_locals=True,
             filename_display=pretty_errors.FILENAME_EXTENDED,
-        ),
-        Middleware(
-            CORSMiddleware,
-            allow_origins=APP_SETTINGS.CORS_ORIGINS,
-            allow_credentials=APP_SETTINGS.CORS_ALLOW_CREDENTIALS,
-            allow_methods=APP_SETTINGS.CORS_ALLOW_METHODS,
-            allow_headers=APP_SETTINGS.CORS_ALLOW_HEADERS,
-        ),
-        Middleware(BackGroundTaskMiddleware),
-        Middleware(RequestIDMiddleware),
-    ]
+        )
+    )
+
     if APP_SETTINGS.GUARD_ENABLED:
         # 预先在 guard_core logger 上注入 filter，阻止初始化时输出冗长的 pipeline 信息
         # setup_custom_logging 只会 clear handlers，不会 clear filters
@@ -102,8 +112,6 @@ def make_middlewares():
         _guard_logger.addFilter(lambda r: "Security pipeline initialized" not in r.getMessage())
         middleware.append(Middleware(SecurityMiddleware, config=_make_guard_config()))
 
-    if APP_SETTINGS.RADAR_ENABLED:
-        middleware.append(Middleware(RadarMiddleware))
     return middleware
 
 

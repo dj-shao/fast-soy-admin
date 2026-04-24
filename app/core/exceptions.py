@@ -40,10 +40,6 @@ class SchemaValidationError(BizError):
     """
 
 
-# 旧版别名
-HTTPException = BizError
-
-
 async def BaseHandle(req: Request, exc: Exception, handle_exc, code: int | str, msg: str | dict, status_code: int = 500, **kwargs) -> JSONResponse:
     x_request_id = CTX_X_REQUEST_ID.get() or ""
     try:

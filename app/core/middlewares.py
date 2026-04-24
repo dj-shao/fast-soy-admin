@@ -121,8 +121,25 @@ class PrettyErrorsMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
         except Exception as exc:
-            pretty_errors.excepthook(*sys.exc_info())
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            pretty_errors.excepthook(exc_type, exc_value, exc_tb)
             output = self.error_buffer.getvalue()
+
+            # 把异常信息塞进 Radar 上下文，这样 5001 JSONResponse 被 Radar 的 send_wrapper
+            # 采集到的同时，error_type / error_message / error_traceback 也能落库。
+            try:
+                from app.system.radar.ctx import CTX_RADAR
+                from app.system.radar.exceptions import format_exception_pretty
+
+                radar_ctx = CTX_RADAR.get()
+                if radar_ctx is not None and radar_ctx.exception_info is None:
+                    radar_ctx.exception_info = {
+                        "type": exc_type.__name__ if exc_type else exc.__class__.__name__,
+                        "message": str(exc_value) if exc_value else str(exc),
+                        "traceback": format_exception_pretty(exc_type, exc_value, exc_tb),
+                    }
+            except Exception:
+                pass
 
             msg = f"服务器内部错误, path: {request.url.path}, query: {dict(request.query_params)}"
 
