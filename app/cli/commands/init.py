@@ -35,6 +35,13 @@ from app.utils import AuditMixin, BaseModel, StatusType
 #     name = fields.CharField(max_length=100, description="名称")
 #     status = fields.CharEnumField(enum_type=StatusType, default=StatusType.enable, description="状态")
 #
+#     # 外键规范：必须在 FK 字段上方声明 <name>_id: int（非空）或 int | None（可空）
+#     # 使用时创建/更新/比较一律用 parent_id，访问关系对象字段前先 prefetch_related("parent")。
+#     # parent_id: int | None
+#     # parent: fields.ForeignKeyNullableRelation["Example"] = fields.ForeignKeyField(
+#     #     "app_{module_name}.Example", null=True, related_name="children", description="父节点",
+#     # )
+#
 #     class Meta:
 #         table = "biz_{module_name}_example"
 #         table_description = "示例"
@@ -58,6 +65,8 @@ GUIDE_TEXT = """\
      • 每个字段加上 \033[36mdescription="..."\033[0m（用于生成 schema 注释）
      • 类的 docstring 写中文名（如 \033[36m\"\"\"仓库\"\"\"\033[0m），将作为 API summary 前缀
      • Meta.table 建议用 \033[36mbiz_{module_name}_xxx\033[0m 前缀
+     • 外键字段上方必须声明 \033[36m<name>_id: int\033[0m（或 \033[36mint | None\033[0m）注解；
+       使用时一律用 \033[36mobj.<name>_id\033[0m，访问关系对象字段前先 \033[36mprefetch_related(...)\033[0m
 
   \033[1m2.\033[0m 模型写好后，运行代码生成（后端 + 前端 CRUD 一次生成）：
 

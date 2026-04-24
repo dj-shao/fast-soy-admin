@@ -333,7 +333,7 @@ router = dept_crud.router
 4. `controllers` / `services` 不要 import `fastapi.Request` / `Response`
 5. 写接口必须挂按钮权限；业务角色种子必须显式 `data_scope`
 6. 不要靠"前端隐藏按钮"做安全；不要在业务里直接判 `role_code == "..."`（用 `has_role_code` / `has_button_code`）
-7. 模型继承 `BaseModel + AuditMixin`；文件头 `# pyright: reportIncompatibleVariableOverride=false`；字段加 `description="..."`；类 docstring 写中文名；`Meta.table = biz_<module>_<entity>`
+7. 模型继承 `BaseModel + AuditMixin`；文件头 `# pyright: reportIncompatibleVariableOverride=false`；字段加 `description="..."`；类 docstring 写中文名；`Meta.table = biz_<module>_<entity>`；**每个 `ForeignKeyField` / `OneToOneField` 上方显式声明 `<name>_id: int`（或 `int | None`）注解**；创建/更新/比较一律用 `obj.<name>_id`，访问关系对象字段必须先 `prefetch_related(...)` 或 `await obj.<name>`（否则循环里触发 N+1、或把未 prefetch 的关系对象直接赋给 FK 导致运行时错误）
 8. 业务模块 import 入口统一 `from app.utils import ...`
 9. 跨业务模块联动用事件总线（`emit` / `on`），不要直接 import 兄弟模块
 10. 事务用 `in_transaction(get_db_conn(Model))`；**不要**硬编码连接名；事务内**不要**做 HTTP / Redis / 队列
