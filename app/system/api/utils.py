@@ -11,7 +11,8 @@ from app.system.radar.developer import radar_log
 async def refresh_api_list():
     from app import fastapi_app
 
-    app_routes = [route for route in fastapi_app.routes if isinstance(route, APIRoute)]
+    # 仅同步进 OpenAPI schema 的路由：探针 / 测试 / dev 工具用 include_in_schema=False 排除
+    app_routes = [route for route in fastapi_app.routes if isinstance(route, APIRoute) and route.include_in_schema]
     app_routes_compared = [(list(route.methods)[0].lower(), route.path_format) for route in app_routes]
 
     async with in_transaction(get_db_conn(Api)):
@@ -40,7 +41,7 @@ async def refresh_api_list():
 async def generate_tags_recursive_list():
     from app import fastapi_app
 
-    app_routes = [route for route in fastapi_app.routes if isinstance(route, APIRoute)]
+    app_routes = [route for route in fastapi_app.routes if isinstance(route, APIRoute) and route.include_in_schema]
     tags_list = [list(route.tags) for route in app_routes]
     unique_tags = list(set(tuple(tag) for tag in sorted(tags_list)))
 

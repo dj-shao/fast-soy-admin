@@ -62,8 +62,8 @@ SYSTEM_ROLE_SEEDS = [
             ("get", "/api/v1/system-manage/menus/tree"),
             ("get", "/api/v1/system-manage/menus/pages"),
             ("get", "/api/v1/system-manage/menus/buttons/tree"),
-            # API
-            *_crud_apis("apis"),
+            # API（资源由 refresh_api_list 全量对账，UI 仅只读）
+            ("post", "/api/v1/system-manage/apis/search"),
             ("get", "/api/v1/system-manage/apis/tree"),
             ("get", "/api/v1/system-manage/apis/tags"),
             # 字典

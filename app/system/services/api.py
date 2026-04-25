@@ -1,8 +1,8 @@
 """
 系统 API 资源管理服务。
 
-负责后台 `/manage/apis/*` 端点的搜索、创建、更新、删除编排，
-api 层只做参数转发与响应封装。
+API 资源由 ``refresh_api_list()`` 全量对账维护（启动时扫描路由），
+UI 仅提供只读浏览：列表 / 树 / tags。
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from app.core.constants import SUPER_ADMIN_ROLE
 from app.core.ctx import CTX_ROLE_CODES
 from app.system.controllers import api_controller
 from app.system.models import Api, Role
-from app.system.radar.developer import radar_log
-from app.system.schemas.admin import ApiCreate, ApiSearch, ApiUpdate
+from app.system.schemas.admin import ApiSearch
 
 
 async def list_apis_with_scope(obj_in: ApiSearch) -> tuple[int, list[dict], int, int]:
@@ -30,6 +29,9 @@ async def list_apis_with_scope(obj_in: ApiSearch) -> tuple[int, list[dict], int,
     )
     if obj_in.tags:
         q &= Q(*[Q(tags__icontains=f"|{tag}|") for tag in obj_in.tags], join_type="OR")
+    # 默认只展示业务模块接口；勾选后展示全部（含系统接口）
+    if not obj_in.include_system:
+        q &= Q(api_path__startswith="/api/v1/business/")
 
     current = obj_in.current or 1
     size = obj_in.size or 10
@@ -50,43 +52,6 @@ async def list_apis_with_scope(obj_in: ApiSearch) -> tuple[int, list[dict], int,
 
     records = [await obj.to_dict(exclude_fields=["created_at", "updated_at"]) for obj in api_objs]
     return total, records, current, size
-
-
-def _normalize_tags(api_in: ApiCreate | ApiUpdate) -> None:
-    if isinstance(api_in.tags, str):
-        api_in.tags = api_in.tags.split("|")
-
-
-async def create_api(api_in: ApiCreate) -> Api:
-    """创建 API 记录，并写审计日志。"""
-    _normalize_tags(api_in)
-    new_api = await api_controller.create(obj_in=api_in)
-    radar_log("创建API", data={"apiId": new_api.id, "apiPath": api_in.api_path, "summary": api_in.summary})
-    return new_api
-
-
-async def update_api(api_id: int, obj_in: ApiUpdate) -> int:
-    """更新 API 记录，并写审计日志。"""
-    _normalize_tags(obj_in)
-    await api_controller.update(id=api_id, obj_in=obj_in)
-    radar_log("编辑API", data={"apiId": api_id, "apiPath": obj_in.api_path, "summary": obj_in.summary})
-    return api_id
-
-
-async def delete_api(api_id: int) -> int:
-    """删除单条 API，并写审计日志。"""
-    api_obj = await api_controller.get(id=api_id)
-    radar_log("删除API", data={"apiId": api_id, "apiPath": api_obj.api_path, "summary": api_obj.summary})
-    await api_controller.remove(id=api_id)
-    return api_id
-
-
-async def batch_delete_apis(ids: list[int]) -> tuple[int, list[int]]:
-    """批量删除 API，并写审计日志。返回 (删除数, ids)。"""
-    api_objs = await Api.filter(id__in=ids)
-    radar_log("批量删除API", data={"apiIds": ids, "apiPaths": [a.api_path for a in api_objs]})
-    deleted_count = await api_controller.batch_remove(ids)
-    return deleted_count, ids
 
 
 def build_api_tree(apis: list[Api]) -> list[dict]:
