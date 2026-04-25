@@ -30,7 +30,7 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
 - **后端** — FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **前端** — Vue3 · Vite7 · TypeScript · Naive UI · UnoCSS · Pinia · Alova · Elegant Router
 - **基础设施** — Docker Compose（Nginx + FastAPI + Redis）、多 worker 启动锁、fastapi-guard 限流、内置 Radar 监控面板
-- **代码生成器** — `make cli-init` 建骨架 → 编辑 `models.py` → `make cli-gen-all` 一键产出后端 + 前端 CRUD（含 i18n 片段）
+- **代码生成器** — `make cli-init` 建骨架 → 编辑 `models.py` → `make cli-gen-all` 一键产出后端 + 前端 CRUD（i18n 由 `_generated/<module>/` 自动并入语言包，无需手工合并）
 
 适合作为中后台项目脚手架，也适合作为全栈开发参考。
 
@@ -43,7 +43,7 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
 - **统一响应** — 所有接口返回 `{code, msg, data}`，HTTP 状态恒 200；snake_case ↔ camelCase 自动转换
 - **Redis 缓存** — 角色权限 / 常量路由 / token 版本号全部走缓存，故障时降级到数据库
 - **严格类型** — 前端 vue-tsc、后端 basedpyright（standard 模式），全栈类型安全
-- **国际化** — vue-i18n 中 / 英双语，代码生成器自动产出 i18n 片段
+- **国际化** — vue-i18n 中 / 英双语；代码生成器输出的 i18n 文件经 `import.meta.glob` 自动并入语言包，并通过 TypeScript declaration merging 注入 `App.I18n.GeneratedPages`，使 `$t` 键空间可被 `vue-tsc` 静态校验
 - **生产可用** — 内置 Radar 请求 / SQL / 异常追踪、fastapi-guard 限流、Sqids 资源 ID、状态机 / 事件总线
 - **Docker 一键部署** — Nginx + FastAPI + Redis 开箱即用
 

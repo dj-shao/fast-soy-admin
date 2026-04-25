@@ -177,7 +177,7 @@ app/business/<name>/
 make cli-init MOD=inventory                       # 生成 models.py 骨架
 # 编辑 app/business/inventory/models.py
 make cli-gen-all MOD=inventory CN=库存管理         # 生成后端 + 前端 CRUD
-# 按生成文件头注释合并 i18n 片段到 web/src/locales/langs/
+# i18n 已自动写入 web/src/locales/langs/_generated/<module>/，由 locale.ts glob 合并、types.d.ts 自动扩展类型，无需手工合并
 # 处理前端外键 / 自定义枚举的 TODO（options 数据源）
 make mm                                           # 迁移
 make dev                                          # 验证

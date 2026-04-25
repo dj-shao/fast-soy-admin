@@ -20,17 +20,10 @@ GUIDE = """\
 
 \033[1;33m📋 后续步骤：\033[0m
 
-  \033[1m1.\033[0m 合并以下三个片段（顺序随意）：
-
-     \033[36mweb/src/locales/langs/_generated/{module}/zh-cn.md\033[0m
-       → 合并到 \033[36mweb/src/locales/langs/zh-cn.ts\033[0m 的 route / page 对象
-
-     \033[36mweb/src/locales/langs/_generated/{module}/en-us.md\033[0m
-       → 合并到 \033[36mweb/src/locales/langs/en-us.ts\033[0m 的 route / page 对象
-
-     \033[36mweb/src/locales/langs/_generated/{module}/app.d.ts.md\033[0m
-       → 合并到 \033[36mweb/src/typings/app.d.ts\033[0m 的 \033[1mApp.I18n.Schema.page\033[0m 子树
-       \033[33m⚠\033[0m 不合并会导致 \033[36m$t('page.{module}...')\033[0m 编译报错 \033[2m(not assignable to I18nKey)\033[0m
+  \033[1m1.\033[0m i18n 已写入 \033[36mweb/src/locales/langs/_generated/{module}/\033[0m，
+     由 \033[36mweb/src/locales/locale.ts\033[0m 通过 \033[36mimport.meta.glob\033[0m 自动合并，
+     类型由同目录 \033[36mtypes.d.ts\033[0m 通过 declare 合并注入 \033[1mApp.I18n.GeneratedPages\033[0m，
+     \033[2m无需手动合并到 zh-cn.ts / en-us.ts / app.d.ts。\033[0m
 
   \033[1m2.\033[0m 搜索生成代码中的 \033[33mTODO\033[0m 注释，补充外键 / 枚举的 options 数据源
 

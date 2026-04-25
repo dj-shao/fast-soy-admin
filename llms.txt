@@ -123,7 +123,7 @@ New business module:
 make cli-init MOD=inventory                  # scaffold app/business/inventory/
 # edit app/business/inventory/models.py
 make cli-gen-all MOD=inventory CN=库存管理    # generate backend + frontend CRUD
-# merge the three .md i18n stubs under web/src/locales/langs/_generated/inventory/
+# i18n is written to web/src/locales/langs/_generated/inventory/ and consumed automatically (no manual merge)
 make mm                                      # makemigrations + migrate
 make dev
 ```

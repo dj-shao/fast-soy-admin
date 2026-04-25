@@ -30,7 +30,7 @@ FastSoyAdmin is a ready-to-use full-stack admin scaffold:
 - **Backend** — FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **Frontend** — Vue3 · Vite7 · TypeScript · Naive UI · UnoCSS · Pinia · Alova · Elegant Router
 - **Infra** — Docker Compose (Nginx + FastAPI + Redis), multi-worker startup lock, fastapi-guard rate limiting, built-in Radar dashboard
-- **Code generator** — `make cli-init` to scaffold, write `models.py`, `make cli-gen-all` to emit backend + frontend CRUD (including i18n stubs)
+- **Code generator** — `make cli-init` to scaffold, write `models.py`, `make cli-gen-all` to emit backend + frontend CRUD (i18n is auto-merged from `_generated/<module>/`; no manual edits to the language packs)
 
 Great as a starting point for internal tools, and as a reference for modern full-stack development.
 
@@ -38,12 +38,12 @@ Great as a starting point for internal tools, and as a reference for modern full
 
 - **Complete RBAC** — three permission layers (menu / API / button) + row-level `data_scope` (all / department / self / custom)
 - **Autodiscovered business modules** — drop a package in `app/business/<name>/`; routes, models, and init data register themselves. Modules are decoupled — cross-module communication uses the event bus.
-- **CLI code generation** — turn Tortoise models into full backend + frontend CRUD (plus i18n snippets) in one command
+- **CLI code generation** — turn Tortoise models into full backend + frontend CRUD in one command; generated i18n files merge in via `import.meta.glob` with TypeScript declaration merging keeping `$t` keys statically checked
 - **Dynamic routing** — menu / API / button permissions are managed on the backend; routes are delivered per role after login
 - **Unified responses** — every endpoint returns `{code, msg, data}` with HTTP status always 200; snake_case ↔ camelCase auto-conversion
 - **Redis cache** — role permissions, constant routes, and token versions all cached; falls back to DB on outage
 - **Strict typing** — vue-tsc on the frontend, basedpyright (standard) on the backend
-- **i18n** — vue-i18n zh / en, CLI emits i18n stubs for new modules
+- **i18n** — vue-i18n zh / en; CLI-emitted module i18n is consumed automatically and `$t` keys are typed via declaration merging
 - **Production-ready** — built-in Radar request / SQL / exception tracing, fastapi-guard, Sqid resource IDs, state machine, event bus
 - **One-command Docker** — Nginx + FastAPI + Redis out of the box
 

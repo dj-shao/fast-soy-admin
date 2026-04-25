@@ -841,7 +841,7 @@ async def init():
 |---|---|
 | `make cli-init MOD=xxx` | 创建业务模块骨架（只含 `models.py`） |
 | `make cli-gen MOD=xxx` | 解析 `models.py`，生成后端 schemas / controllers / api / init_data / services |
-| `make cli-gen-web MOD=xxx CN=中文名` | 解析 `models.py`，生成前端 service / typings / views / i18n 片段 |
+| `make cli-gen-web MOD=xxx CN=中文名` | 解析 `models.py`，生成前端 service / typings / views / i18n（自动合并） |
 | `make cli-gen-all MOD=xxx CN=中文名` | 一次跑完 cli-gen + cli-gen-web |
 
 ### 12.1 字段类型映射
@@ -867,17 +867,17 @@ async def init():
   - `description="仓库编号。全局唯一"` → 取 `仓库编号`
   - 空 / 未填 → fallback 为字段名本身
 
-### 12.3 i18n 片段合并
+### 12.3 i18n 自动合并
 
-生成物用 `.md` 扩展名、**不会**被 pnpm 构建直接加载，需要手动合并：
+生成物均为可执行 TS / d.ts 文件，由前端工程链自动消费，无需手动并入全局语言包：
 
-| 生成文件 | 合并到 | 合并到哪段 |
+| 文件 | 消费方 | 作用 |
 |---|---|---|
-| `_generated/<mod>/zh-cn.md` | `web/src/locales/langs/zh-cn.ts` | `route` / `page` 对象 |
-| `_generated/<mod>/en-us.md` | `web/src/locales/langs/en-us.ts` | `route` / `page` 对象 |
-| `_generated/<mod>/app.d.ts.md` | `web/src/typings/app.d.ts` | `App.I18n.Schema.page` 子树 |
+| `_generated/<mod>/zh-cn.ts` | `web/src/locales/locale.ts` 通过 `import.meta.glob` 深合并入 zh-CN messages | 注入 `route.<module>` / `page.<module>` 子树 |
+| `_generated/<mod>/en-us.ts` | 同上，对应 en-US | 注入英文 |
+| `_generated/<mod>/types.d.ts` | declaration merging 注入 `App.I18n.GeneratedPages` | 使 `$t('page.<module>.<entity>.xxx')` 可被 `vue-tsc` 校验 |
 
-⚠️ **必须合并 `app.d.ts.md`**——不合并会导致 `$t('page.xxx...')` 编译报错。`route` 命名空间由 Elegant Router 自动补齐，不需要手动改类型。
+类型契约：`Schema.page` 与 `_MergePages<GeneratedPages>` 取交集；基础 `zh-cn.ts` / `en-us.ts` 标注为 `App.I18n.BaseSchema`（即 `Schema` 排除 `GeneratedPages` 部分），新模块不会要求基础文件补字段。`Schema.route` 为 `Partial<Record<I18nRouteKey, string>>`，路由键由 Elegant Router 自 `views/` 推导，对应翻译由 `_generated/<mod>/zh-cn.ts` 提供。
 
 ---
 
