@@ -75,6 +75,10 @@ redis_data/
 # ========================
 web/cypress/videos/
 web/cypress/screenshots/
+web/playwright-report/
+web/test-results/
+web/.playwright/
+app_system_e2e.sqlite3*
 
 .codex/
 .claude/
