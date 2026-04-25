@@ -95,6 +95,13 @@ class TagIds(SchemaBase):
     tag_ids: list[SqidId] = Field(title="标签ID列表")
 
 
+class MyProfileUpdate(SchemaBase):
+    """员工自助维护资料 — 仅暴露电话与邮箱。"""
+
+    phone: str | None = Field(None, title="电话")
+    email: str | None = Field(None, title="邮箱")
+
+
 class EmployeeSearch(EmployeeBase, PageQueryBase):
     department_id: SqidId | None = Field(None, title="部门ID")
     created_at_start: datetime | None = Field(None, title="创建时间起始")

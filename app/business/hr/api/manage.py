@@ -24,7 +24,6 @@ from app.business.hr.services import create_employee, get_department_stats, list
 from app.core.config import APP_SETTINGS
 from app.core.sqids import encode_id
 from app.utils import (
-    CTX_USER_ID,
     CRUDRouter,
     DependPermission,
     Fail,
@@ -44,7 +43,7 @@ dept_crud = CRUDRouter(
     search_fields=SearchFieldConfig(contains_fields=["name", "code"], exact_fields=["status"]),
     summary_prefix="部门",
     soft_delete=True,
-    tree_endpoint=True,
+    enable_routes={"list", "create", "update", "delete", "batch_delete"},
     action_dependencies={
         "create": [require_buttons("B_HR_DEPT_CREATE")],
         "update": [require_buttons("B_HR_DEPT_EDIT")],
@@ -61,6 +60,7 @@ tag_crud = CRUDRouter(
     list_schema=TagSearch,
     search_fields=SearchFieldConfig(contains_fields=["name"], exact_fields=["category"]),
     summary_prefix="标签",
+    enable_routes={"list", "create", "update", "delete", "batch_delete"},
     action_dependencies={
         "create": [require_buttons("B_HR_TAG_CREATE")],
         "update": [require_buttons("B_HR_TAG_EDIT")],
@@ -126,13 +126,11 @@ router.include_router(emp_crud.router)
     dependencies=[require_buttons("B_HR_EMP_CREATE")],
 )
 async def create_emp(emp_in: EmployeeCreate, request: Request):
+    """HR 管理员视角：必须指定 department_id；自动创建系统用户。
+
+    部门主管创建下属请走 ``POST /hr/team/employees``。
     """
-    超级管理员：须指定 department_id
-    部门主管（B_HR_EMP_CREATE）：department 自动继承
-    共同逻辑：自动创建系统用户（R_USER，must_change_password=True），密码随机生成并返回给前端
-    """
-    current_emp = await employee_controller.get_or_none(user_id=CTX_USER_ID.get())
-    return await create_employee(emp_in, current_emp, request.app.state.redis)
+    return await create_employee(emp_in, request.app.state.redis)
 
 
 @router.patch(

@@ -7,6 +7,8 @@ HR 模块初始化数据 — 菜单、角色、标签与演示员工。
 
 from __future__ import annotations
 
+import asyncio
+
 from app.business.hr.config import BIZ_SETTINGS
 from app.business.hr.models import Department, Employee, Tag
 from app.core.data_scope import DataScopeType
@@ -15,12 +17,38 @@ from app.system.services.init_helper import _safe_update_or_create
 
 HR_MENU_CHILDREN = [
     {
+        "menu_name": "我的工作台",
+        "route_name": "hr_my-workspace",
+        "route_path": "/hr/my-workspace",
+        "component": "view.hr_my-workspace",
+        "icon": "mdi:account-circle-outline",
+        "order": 1,
+        "buttons": [
+            {"button_code": "B_HR_MY_TAG_EDIT", "button_desc": "编辑自己的标签"},
+            {"button_code": "B_HR_MY_AVATAR_EDIT", "button_desc": "上传自己的头像"},
+        ],
+    },
+    {
+        "menu_name": "我的团队",
+        "route_name": "hr_team",
+        "route_path": "/hr/team",
+        "component": "view.hr_team",
+        "icon": "mdi:account-supervisor-circle-outline",
+        "order": 2,
+        "buttons": [
+            {"button_code": "B_HR_TEAM_EMP_CREATE", "button_desc": "[主管] 创建下属"},
+            {"button_code": "B_HR_TEAM_EMP_EDIT", "button_desc": "[主管] 编辑下属"},
+            {"button_code": "B_HR_TEAM_TAG_EDIT", "button_desc": "[主管] 编辑下属标签"},
+            {"button_code": "B_HR_TEAM_EMP_TRANSITION", "button_desc": "[主管] 推进下属状态"},
+        ],
+    },
+    {
         "menu_name": "部门管理",
         "route_name": "hr_department",
         "route_path": "/hr/department",
         "component": "view.hr_department",
         "icon": "mdi:office-building",
-        "order": 1,
+        "order": 3,
         "buttons": [
             {"button_code": "B_HR_DEPT_CREATE", "button_desc": "创建部门"},
             {"button_code": "B_HR_DEPT_EDIT", "button_desc": "编辑部门"},
@@ -33,7 +61,7 @@ HR_MENU_CHILDREN = [
         "route_path": "/hr/employee",
         "component": "view.hr_employee",
         "icon": "mdi:account",
-        "order": 2,
+        "order": 4,
         "buttons": [
             {"button_code": "B_HR_EMP_CREATE", "button_desc": "创建员工"},
             {"button_code": "B_HR_EMP_EDIT", "button_desc": "编辑员工"},
@@ -47,7 +75,7 @@ HR_MENU_CHILDREN = [
         "route_path": "/hr/tag",
         "component": "view.hr_tag",
         "icon": "mdi:tag-multiple",
-        "order": 3,
+        "order": 5,
         "buttons": [
             {"button_code": "B_HR_TAG_CREATE", "button_desc": "创建标签"},
             {"button_code": "B_HR_TAG_EDIT", "button_desc": "编辑标签"},
@@ -56,14 +84,65 @@ HR_MENU_CHILDREN = [
     },
 ]
 
+# 三类接口聚合，便于在角色 seed 中组合复用
+HR_MY_APIS = [
+    ("get", "/api/v1/business/hr/my/profile"),
+    ("patch", "/api/v1/business/hr/my/profile"),
+    ("patch", "/api/v1/business/hr/my/tags"),
+    ("get", "/api/v1/business/hr/my/department"),
+    ("post", "/api/v1/business/hr/my/avatar"),
+    ("post", "/api/v1/business/hr/tags/search"),  # 标签下拉
+]
+
+HR_TEAM_APIS = [
+    ("post", "/api/v1/business/hr/team/employees/search"),
+    ("get", "/api/v1/business/hr/team/stats"),
+    ("post", "/api/v1/business/hr/team/employees"),
+    ("patch", "/api/v1/business/hr/team/employees/{emp_id}"),
+    ("patch", "/api/v1/business/hr/team/employees/{emp_id}/tags"),
+    ("post", "/api/v1/business/hr/team/employees/{emp_id}/transition"),
+]
+
+HR_ADMIN_APIS = [
+    # 部门
+    ("post", "/api/v1/business/hr/departments/search"),
+    ("post", "/api/v1/business/hr/departments"),
+    ("patch", "/api/v1/business/hr/departments/{item_id}"),
+    ("delete", "/api/v1/business/hr/departments/{item_id}"),
+    ("delete", "/api/v1/business/hr/departments"),
+    ("get", "/api/v1/business/hr/departments/stats"),
+    # 员工
+    ("post", "/api/v1/business/hr/employees/search"),
+    ("get", "/api/v1/business/hr/employees/{item_id}"),
+    ("post", "/api/v1/business/hr/employees"),
+    ("patch", "/api/v1/business/hr/employees/{emp_id}"),
+    ("delete", "/api/v1/business/hr/employees/{item_id}"),
+    ("delete", "/api/v1/business/hr/employees"),
+    ("post", "/api/v1/business/hr/employees/{emp_id}/transition"),
+    ("post", "/api/v1/business/hr/employees/{emp_id}/avatar"),
+    # 标签
+    ("post", "/api/v1/business/hr/tags/search"),
+    ("post", "/api/v1/business/hr/tags"),
+    ("patch", "/api/v1/business/hr/tags/{item_id}"),
+    ("delete", "/api/v1/business/hr/tags/{item_id}"),
+    ("delete", "/api/v1/business/hr/tags"),
+]
+
+
 HR_ROLE_SEEDS = [
     {
         "role_name": "HR管理员",
         "role_code": "R_HR_ADMIN",
         "role_desc": "HR 总管，掌管部门、员工、标签的全量维护",
         "data_scope": DataScopeType.all,
-        "menus": ["home", "hr", "hr_department", "hr_employee", "hr_tag"],
+        "menus": ["home", "hr", "hr_my-workspace", "hr_team", "hr_department", "hr_employee", "hr_tag"],
         "buttons": [
+            "B_HR_MY_TAG_EDIT",
+            "B_HR_MY_AVATAR_EDIT",
+            "B_HR_TEAM_EMP_CREATE",
+            "B_HR_TEAM_EMP_EDIT",
+            "B_HR_TEAM_TAG_EDIT",
+            "B_HR_TEAM_EMP_TRANSITION",
             "B_HR_DEPT_CREATE",
             "B_HR_DEPT_EDIT",
             "B_HR_DEPT_DELETE",
@@ -75,52 +154,32 @@ HR_ROLE_SEEDS = [
             "B_HR_TAG_EDIT",
             "B_HR_TAG_DELETE",
         ],
-        "apis": [
-            # 部门
-            ("post", "/api/v1/business/hr/departments/search"),
-            ("get", "/api/v1/business/hr/departments/{item_id}"),
-            ("post", "/api/v1/business/hr/departments"),
-            ("patch", "/api/v1/business/hr/departments/{item_id}"),
-            ("delete", "/api/v1/business/hr/departments/{item_id}"),
-            ("delete", "/api/v1/business/hr/departments"),
-            ("get", "/api/v1/business/hr/departments/tree"),
-            ("get", "/api/v1/business/hr/departments/stats"),
-            # 员工
-            ("post", "/api/v1/business/hr/employees/search"),
-            ("get", "/api/v1/business/hr/employees/{item_id}"),
-            ("post", "/api/v1/business/hr/employees"),
-            ("patch", "/api/v1/business/hr/employees/{emp_id}"),
-            ("delete", "/api/v1/business/hr/employees/{item_id}"),
-            ("delete", "/api/v1/business/hr/employees"),
-            ("post", "/api/v1/business/hr/employees/{emp_id}/transition"),
-            # 标签
-            ("post", "/api/v1/business/hr/tags/search"),
-            ("get", "/api/v1/business/hr/tags/{item_id}"),
-            ("post", "/api/v1/business/hr/tags"),
-            ("patch", "/api/v1/business/hr/tags/{item_id}"),
-            ("delete", "/api/v1/business/hr/tags/{item_id}"),
-            ("delete", "/api/v1/business/hr/tags"),
-        ],
+        "apis": HR_MY_APIS + HR_TEAM_APIS + HR_ADMIN_APIS,
     },
     {
         "role_name": "部门主管",
         "role_code": "R_DEPT_MGR",
-        "role_desc": "部门主管，可管理本部门员工",
+        "role_desc": "部门主管，可管理本部门员工与下属",
         "data_scope": DataScopeType.department,
-        "menus": ["home", "hr", "hr_department", "hr_employee", "hr_tag"],
-        "buttons": ["B_HR_EMP_CREATE", "B_HR_EMP_EDIT", "B_HR_EMP_TRANSITION"],
-        "apis": [
-            ("post", "/api/v1/business/hr/employees"),
-            ("post", "/api/v1/business/hr/employees/search"),
-            ("patch", "/api/v1/business/hr/employees/{emp_id}"),
-            ("get", "/api/v1/business/hr/employees/{item_id}"),
-            ("post", "/api/v1/business/hr/employees/{emp_id}/transition"),
-            ("get", "/api/v1/business/hr/department/employees"),
-            ("post", "/api/v1/business/hr/departments/search"),
-            ("patch", "/api/v1/business/hr/department/employees/{emp_id}/tags"),
-            ("get", "/api/v1/business/hr/departments/stats"),
-            ("post", "/api/v1/business/hr/tags/search"),
+        "menus": ["home", "hr", "hr_my-workspace", "hr_team"],
+        "buttons": [
+            "B_HR_MY_TAG_EDIT",
+            "B_HR_MY_AVATAR_EDIT",
+            "B_HR_TEAM_EMP_CREATE",
+            "B_HR_TEAM_EMP_EDIT",
+            "B_HR_TEAM_TAG_EDIT",
+            "B_HR_TEAM_EMP_TRANSITION",
         ],
+        "apis": HR_MY_APIS + HR_TEAM_APIS,
+    },
+    {
+        "role_name": "普通员工",
+        "role_code": "R_EMPLOYEE",
+        "role_desc": "已绑定员工身份的普通用户，仅能维护自己的资料/标签并查看同部门同事",
+        "data_scope": DataScopeType.self_,
+        "menus": ["home", "hr", "hr_my-workspace"],
+        "buttons": ["B_HR_MY_TAG_EDIT", "B_HR_MY_AVATAR_EDIT"],
+        "apis": HR_MY_APIS,
     },
 ]
 
@@ -166,7 +225,7 @@ HR_EMPLOYEE_SEEDS = [
         "user": {
             "user_name": "limu",
             "password": "123456",
-            "role_codes": ["R_USER"],
+            "role_codes": ["R_EMPLOYEE"],
             "user_email": "limu@example.com",
             "nick_name": "李沐",
         },
@@ -202,7 +261,7 @@ HR_EMPLOYEE_SEEDS = [
         "user": {
             "user_name": "chenxi",
             "password": "123456",
-            "role_codes": ["R_USER"],
+            "role_codes": ["R_EMPLOYEE"],
             "user_email": "chenxi@example.com",
             "nick_name": "陈希",
         },
@@ -292,7 +351,7 @@ HR_EMPLOYEE_SEEDS = [
         "user": {
             "user_name": "suwan",
             "password": "123456",
-            "role_codes": ["R_USER"],
+            "role_codes": ["R_EMPLOYEE"],
             "user_email": "suwan@example.com",
             "nick_name": "苏婉",
         },
@@ -364,29 +423,33 @@ async def _init_menu_data() -> None:
 
 
 async def _init_role_data() -> None:
-    for role_seed in HR_ROLE_SEEDS:
-        await ensure_role(**role_seed)
+    await asyncio.gather(*(ensure_role(**role_seed) for role_seed in HR_ROLE_SEEDS))
 
 
 async def _init_departments() -> None:
-    for department_seed in HR_DEPARTMENT_SEEDS:
-        defaults = {
-            "name": department_seed["name"],
-            "description": department_seed["description"],
-        }
-        await _safe_update_or_create(Department, {"code": department_seed["code"]}, defaults)
+    await asyncio.gather(
+        *(
+            _safe_update_or_create(
+                Department,
+                {"code": seed["code"]},
+                {"name": seed["name"], "description": seed["description"]},
+            )
+            for seed in HR_DEPARTMENT_SEEDS
+        )
+    )
 
 
 async def _init_tags() -> None:
-    for tag_seed in HR_TAG_SEEDS:
-        await _safe_update_or_create(
-            Tag,
-            {"name": tag_seed["name"]},
-            {
-                "category": tag_seed["category"],
-                "description": tag_seed["description"],
-            },
+    await asyncio.gather(
+        *(
+            _safe_update_or_create(
+                Tag,
+                {"name": seed["name"]},
+                {"category": seed["category"], "description": seed["description"]},
+            )
+            for seed in HR_TAG_SEEDS
         )
+    )
 
 
 async def _ensure_demo_employee(seed: dict) -> Employee:
@@ -418,20 +481,18 @@ async def _ensure_demo_employee(seed: dict) -> Employee:
 
 
 async def _init_demo_employees() -> None:
-    employee_map: dict[int, Employee] = {}
-    for seed in HR_EMPLOYEE_SEEDS:
-        employee = await _ensure_demo_employee(seed)
-        employee_map[seed["employee"]["employee_no_serial"]] = employee
+    employees = await asyncio.gather(*(_ensure_demo_employee(seed) for seed in HR_EMPLOYEE_SEEDS))
+    employee_map: dict[int, Employee] = {seed["employee"]["employee_no_serial"]: emp for seed, emp in zip(HR_EMPLOYEE_SEEDS, employees)}
 
-    for department_seed in HR_DEPARTMENT_SEEDS:
-        manager_serial = department_seed["manager_employee_no"]
-        manager = employee_map.get(manager_serial) if manager_serial else None
-        await Department.filter(code=department_seed["code"]).update(manager_id=manager.id if manager else None)
+    async def _update_manager(seed: dict) -> None:
+        manager = employee_map.get(seed["manager_employee_no"]) if seed.get("manager_employee_no") else None
+        await Department.filter(code=seed["code"]).update(manager_id=manager.id if manager else None)
+
+    await asyncio.gather(*(_update_manager(seed) for seed in HR_DEPARTMENT_SEEDS))
 
 
 async def init():
     await _init_menu_data()
     await _init_role_data()
-    await _init_departments()
-    await _init_tags()
+    await asyncio.gather(_init_departments(), _init_tags())
     await _init_demo_employees()

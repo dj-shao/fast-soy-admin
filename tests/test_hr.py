@@ -42,14 +42,6 @@ class TestDepartmentCRUD:
         records = resp.json()["data"]["records"]
         assert any(r["name"] == "Engineering" for r in records)
 
-    async def test_get_department(self, auth_client: AsyncClient, hr_data):
-        dept_id = encode_id(hr_data["department"].id)
-        resp = await auth_client.get(f"{PREFIX}/departments/{dept_id}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["code"] == "ENG"
-
     async def test_update_department(self, auth_client: AsyncClient, hr_data):
         dept_id = encode_id(hr_data["department"].id)
         resp = await auth_client.patch(
@@ -101,14 +93,6 @@ class TestTagCRUD:
         data = resp.json()
         assert data["code"] == "0000"
         assert len(data["data"]["records"]) >= 2  # Python, JavaScript from seed
-
-    async def test_get_tag(self, auth_client: AsyncClient, hr_data):
-        tag_id = encode_id(hr_data["tags"][0].id)
-        resp = await auth_client.get(f"{PREFIX}/tags/{tag_id}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["name"] == "Python"
 
     async def test_update_tag(self, auth_client: AsyncClient, hr_data):
         tag_id = encode_id(hr_data["tags"][0].id)
@@ -226,12 +210,12 @@ class TestEmployeeCRUD:
 
 class TestManagerOperations:
     async def test_view_department_employees(self, auth_client: AsyncClient, hr_data):
-        """Manager views all employees in their department."""
-        resp = await auth_client.get(f"{PREFIX}/department/employees")
+        """Manager searches employees in their department (paginated)."""
+        resp = await auth_client.post(f"{PREFIX}/team/employees/search", json={"current": 1, "size": 10})
         assert resp.status_code == 200
         data = resp.json()
         assert data["code"] == "0000"
-        records = data["data"]
+        records = data["data"]["records"]
         assert len(records) >= 1
         assert "tagNames" in records[0]
 
@@ -240,7 +224,7 @@ class TestManagerOperations:
         emp_id = encode_id(hr_data["employee"].id)
         tag_ids = [encode_id(t.id) for t in hr_data["tags"]]
         resp = await auth_client.patch(
-            f"{PREFIX}/department/employees/{emp_id}/tags",
+            f"{PREFIX}/team/employees/{emp_id}/tags",
             json={"tagIds": tag_ids},
         )
         assert resp.status_code == 200
@@ -249,7 +233,7 @@ class TestManagerOperations:
     async def test_edit_tags_employee_not_in_dept(self, auth_client: AsyncClient, hr_data):
         """Editing tags of an employee not in the manager's department fails."""
         resp = await auth_client.patch(
-            f"{PREFIX}/department/employees/{encode_id(99999)}/tags",
+            f"{PREFIX}/team/employees/{encode_id(99999)}/tags",
             json={"tagIds": [encode_id(hr_data["tags"][0].id)]},
         )
         assert resp.status_code == 200

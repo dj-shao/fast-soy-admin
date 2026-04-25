@@ -17,7 +17,7 @@ from app.core.events import emit
 from app.core.sqids import encode_id
 from app.core.state_machine import StateMachine
 from app.system.services import create_system_user
-from app.utils import CTX_USER_ID, Fail, Success, get_current_user_id, get_db_conn, has_button_code, is_super_admin, radar_log
+from app.utils import CTX_USER_ID, Fail, Success, get_current_user_id, get_db_conn, radar_log
 
 # ---- 员工状态机 ----
 
@@ -37,36 +37,14 @@ async def generate_employee_no() -> str:
     return f"{BIZ_SETTINGS.EMPLOYEE_NO_PREFIX}{count + 1:04d}"
 
 
-async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, redis):
-    """
-    统一创建员工 — 自动创建系统用户 + 员工 + 标签关联。
-
-    - 超级管理员: department 必须指定
-    - 部门主管(B_HR_CREATE): department 自动继承
-    """
-    # 1. 权限 & 部门
-    # - 超级管理员 / HR 管理员（持 B_HR_EMP_CREATE 但未绑定员工）：必须显式指定 department_id
-    # - 部门主管（持 B_HR_EMP_CREATE 且绑定的员工是某部门主管）：自动继承本部门
-    if is_super_admin() or (has_button_code("B_HR_EMP_CREATE") and not current_emp):
-        if not emp_in.department_id:
-            return Fail(code=Code.HR_DEPARTMENT_REQUIRED, msg="创建员工需要指定部门")
-    elif has_button_code("B_HR_EMP_CREATE") and current_emp:
-        dept = await Department.filter(manager_id=current_emp.id).first()
-        if not dept:
-            return Fail(code=Code.HR_MANAGER_REQUIRED, msg="仅部门主管可创建员工")
-        emp_in.department_id = dept.id
-    else:
-        return Fail(code=Code.HR_CREATE_FORBIDDEN, msg="无权限创建员工")
-
-    # 2. 校验标签上限
+async def _create_employee_core(emp_in: EmployeeCreate, redis):
+    """创建系统用户 + 员工 + 标签关联（事务）。调用方需自行校验权限/部门。"""
     if emp_in.tag_ids and len(emp_in.tag_ids) > BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE:
         return Fail(code=Code.HR_TAGS_EXCEED_LIMIT, msg=f"标签数量不能超过 {BIZ_SETTINGS.MAX_TAGS_PER_EMPLOYEE}")
 
     employee_no = await generate_employee_no()
 
-    # 3. 一个事务: 创建 User + Employee + 标签关联
     async with in_transaction(get_db_conn(Employee)):
-        # 创建系统用户 (随机密码 + must_change_password + R_USER)
         try:
             result = await create_system_user(
                 redis,
@@ -79,12 +57,10 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
         except ValueError as e:
             return Fail(msg=str(e))
 
-        # 创建员工 — employee_no/email/user_id 需要在 create 时设置（NOT NULL 字段）
         emp_data = emp_in.model_dump(exclude_unset=True, exclude_none=True, exclude={"tag_ids", "password", "email", "user_name", "user_gender"})
         emp_data.update(employee_no=employee_no, email=emp_in.email, user_id=result.user.id)
         new_emp = await employee_controller.create(obj_in=emp_data)
 
-        # 关联标签
         if emp_in.tag_ids:
             for tid in emp_in.tag_ids:
                 tag = await tag_controller.get(id=tid)
@@ -102,6 +78,19 @@ async def create_employee(emp_in: EmployeeCreate, current_emp: Employee | None, 
             "raw_password": result.raw_password,
         },
     )
+
+
+async def create_employee(emp_in: EmployeeCreate, redis):
+    """HR 管理员视角创建员工 — 必须显式指定部门。"""
+    if not emp_in.department_id:
+        return Fail(code=Code.HR_DEPARTMENT_REQUIRED, msg="创建员工需要指定部门")
+    return await _create_employee_core(emp_in, redis)
+
+
+async def create_subordinate_employee(emp_in: EmployeeCreate, mgr: Employee, redis):
+    """部门主管视角创建下属 — 部门强制继承自主管所在部门。"""
+    emp_in.department_id = mgr.department_id  # type: ignore[attr-defined]
+    return await _create_employee_core(emp_in, redis)
 
 
 async def list_employees_with_relations(search_in: EmployeeSearch, redis=None):
@@ -187,6 +176,36 @@ async def edit_subordinate_tags(mgr: Employee, emp_id: int, tag_ids: list[int]):
     if not target:
         return Fail(code=Code.HR_EMPLOYEE_NOT_IN_DEPT, msg="该员工不在您的部门中")
     return await update_employee_tags(target, tag_ids, log_label="主管编辑下属标签", extra_log={"managerId": mgr.id})
+
+
+async def update_subordinate_employee(mgr: Employee, emp_id: int, emp_in: EmployeeUpdate):
+    """主管编辑下属基础信息 — 校验目标必须在本部门。"""
+    target = await employee_controller.get_or_none(id=emp_id, department_id=mgr.department_id)  # type: ignore[attr-defined]
+    if not target:
+        return Fail(code=Code.HR_EMPLOYEE_NOT_IN_DEPT, msg="该员工不在您的部门中")
+    return await update_employee(emp_id, emp_in)
+
+
+async def transition_subordinate(emp_id: int, to_state: str):
+    """主管推进下属状态 — 调用方需先校验下属归属（在 team router 中完成）。"""
+    return await transition_employee(emp_id, to_state)
+
+
+async def get_team_overview(mgr: Employee):
+    """主管视角的部门概览 — 状态分布 + 总人数 + 部门信息。"""
+    dept = await Department.get(id=mgr.department_id)  # type: ignore[attr-defined]
+    qs = Employee.filter(department_id=mgr.department_id)  # type: ignore[attr-defined]
+    total = await qs.count()
+    status_counts: dict[str, int] = {}
+    from app.business.hr.models import EmployeeStatus
+
+    for status in EmployeeStatus:
+        status_counts[status.value] = await qs.filter(status=status).count()
+    return {
+        "department": {"id": dept.id, "name": dept.name, "code": dept.code},
+        "total": total,
+        "statusCounts": status_counts,
+    }
 
 
 async def transition_employee(emp_id: int, to_state: str):

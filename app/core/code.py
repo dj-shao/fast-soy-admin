@@ -91,18 +91,18 @@ class Code:
     ROUTE_NAME_REQUIRED = "2607"  # 路由名称不能为空
     ROUTE_PATH_REQUIRED = "2608"  # 路由路径不能为空
 
-    # 27xx — HR 业务
-    HR_DEPARTMENT_REQUIRED = "2700"  # 超级管理员创建员工需要指定部门
-    HR_MANAGER_REQUIRED = "2701"  # 仅部门主管可创建员工
-    HR_CREATE_FORBIDDEN = "2702"  # 无权限创建员工
-    HR_TAGS_EXCEED_LIMIT = "2703"  # 员工标签数量超出上限
-    HR_EMPLOYEE_NOT_IN_DEPT = "2704"  # 该员工不在当前主管部门中
-    HR_USER_NOT_EMPLOYEE = "2705"  # 当前用户未关联员工信息
-    HR_MANAGER_ONLY = "2706"  # 仅部门主管可执行此操作
-    HR_INVALID_TRANSITION = "2707"  # 不允许的状态流转
-
     # ==== 3xxx 内部保留 ====
     # （暂未使用，为未来框架扩展预留）
 
     # ==== 4000-9999 用户自定义业务码 ====
     # （框架不使用——供项目专属业务逻辑使用）
+
+    # 40xx — HR 业务模块
+    HR_DEPARTMENT_REQUIRED = "4000"  # 超级管理员创建员工需要指定部门
+    HR_MANAGER_REQUIRED = "4001"  # 仅部门主管可创建员工
+    HR_CREATE_FORBIDDEN = "4002"  # 无权限创建员工
+    HR_TAGS_EXCEED_LIMIT = "4003"  # 员工标签数量超出上限
+    HR_EMPLOYEE_NOT_IN_DEPT = "4004"  # 该员工不在当前主管部门中
+    HR_USER_NOT_EMPLOYEE = "4005"  # 当前用户未关联员工信息
+    HR_MANAGER_ONLY = "4006"  # 仅部门主管可执行此操作
+    HR_INVALID_TRANSITION = "4007"  # 不允许的状态流转

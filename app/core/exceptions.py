@@ -53,12 +53,16 @@ async def BaseHandle(req: Request, exc: Exception, handle_exc, code: int | str, 
 
     request_input = {"path": req.url.path, "query": req.query_params._dict, "body": request_body, "headers": dict(req.headers)}
 
+    # 1xxx 系统内部异常视为非预期 → ERROR；其余（认证/授权/业务/校验等）属于预期失败 → WARNING。
+    code_str = str(code)
+    log_level = "ERROR" if code_str.startswith("1") else "WARNING"
+
     try:
         from app.system.radar.developer import radar_log
 
         radar_log(
             f"异常响应: code={code} msg={msg}",
-            level="ERROR",
+            level=log_level,
             data={"xRequestId": x_request_id, "input": request_input, **kwargs},
         )
     except Exception:
