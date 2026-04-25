@@ -116,30 +116,6 @@ class TestRequestDetail:
         assert data["data"] is None
 
 
-class TestRequestTimeline:
-    async def test_timeline(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/requests/api-req-001/timeline")
-        data = resp.json()
-        assert data["code"] == "0000"
-        timeline = data["data"]
-        assert len(timeline) >= 3  # 2 queries + 1 user log
-        types = {item["type"] for item in timeline}
-        assert "query" in types
-        assert "user_log" in types
-
-    async def test_timeline_sorted(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/requests/api-req-001/timeline")
-        timeline = resp.json()["data"]
-        offsets = [item.get("start_offset_ms") or 0 for item in timeline]
-        assert offsets == sorted(offsets)
-
-    async def test_timeline_not_found(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/requests/nonexistent/timeline")
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"] == []
-
-
 class TestListQueries:
     async def test_default(self, client: AsyncClient, seed_radar_api_data):
         resp = await client.get("/__radar/api/queries")
@@ -160,14 +136,6 @@ class TestListQueries:
         for r in records:
             assert "xRequestId" in r
             assert "requestPath" in r
-
-
-class TestSlowQueries:
-    async def test_slow_queries(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/queries/slow", params={"limit": 10})
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert isinstance(data["data"], list)
 
 
 class TestListExceptions:
@@ -222,20 +190,6 @@ class TestResolveException:
         assert resp.status_code == 200
         data = resp.json()
         assert data["code"] == Code.REQUEST_VALIDATION
-
-
-class TestUserLogs:
-    async def test_default(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/user-logs")
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["total"] >= 1
-
-    async def test_filter_by_level(self, client: AsyncClient, seed_radar_api_data):
-        resp = await client.get("/__radar/api/user-logs", params={"level": "INFO"})
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert all(r["level"] == "INFO" for r in data["data"]["records"])
 
 
 class TestStats:

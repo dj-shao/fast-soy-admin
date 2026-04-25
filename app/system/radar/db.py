@@ -133,44 +133,6 @@ async def query_request_detail(x_request_id: str) -> dict | None:
     return result
 
 
-async def query_request_timeline(x_request_id: str) -> list[dict]:
-    req = await RadarRequest.filter(x_request_id=x_request_id).first()
-    if not req:
-        return []
-
-    timeline: list[dict] = []
-
-    query_objs = await RadarQuery.filter(request=req).order_by("start_offset_ms")
-    for q in query_objs:
-        timeline.append({
-            "type": "query",
-            "name": f"{q.operation} query",
-            "sql": q.sql_text,
-            "start_offset_ms": q.start_offset_ms,
-            "duration_ms": q.duration_ms,
-        })
-
-    log_objs = await RadarUserLog.filter(request=req).order_by("offset_ms")
-    for ul in log_objs:
-        timeline.append({
-            "type": "user_log",
-            "name": f"[{ul.level}] {ul.message}",
-            "start_offset_ms": ul.offset_ms,
-            "duration_ms": 0,
-        })
-
-    if req.error_type:
-        timeline.append({
-            "type": "exception",
-            "name": f"Exception: {req.error_type}",
-            "start_offset_ms": req.duration_ms or 0,
-            "duration_ms": 0,
-        })
-
-    timeline.sort(key=lambda x: x.get("start_offset_ms") or 0)
-    return timeline
-
-
 async def query_all_queries(
     page: int = 1,
     page_size: int = 20,
@@ -220,18 +182,6 @@ async def query_exceptions(
 async def update_exception_resolved(x_request_id: str, resolved: bool) -> bool:
     updated = await RadarRequest.filter(x_request_id=x_request_id, error_type__not_isnull=True).update(resolved=resolved)
     return updated > 0
-
-
-async def query_user_logs(page: int = 1, page_size: int = 20, level: str | None = None) -> tuple[int, list[dict]]:
-    q = Q()
-    if level:
-        q &= Q(level=level.upper())
-
-    total = await RadarUserLog.filter(q).count()
-    offset = (page - 1) * page_size
-    objs = await RadarUserLog.filter(q).order_by("-id").offset(offset).limit(page_size)
-    records = [await obj.to_dict() for obj in objs]
-    return total, records
 
 
 async def query_stats(hours: int | None = None) -> dict:

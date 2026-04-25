@@ -8,10 +8,8 @@ from app.system.radar.db import (
     query_all_queries,
     query_exceptions,
     query_request_detail,
-    query_request_timeline,
     query_requests,
     query_stats,
-    query_user_logs,
     update_exception_resolved,
 )
 from app.system.radar.models import RadarQuery, RadarRequest, RadarUserLog
@@ -141,30 +139,6 @@ class TestQueryRequestDetail:
         assert detail is None
 
 
-class TestQueryRequestTimeline:
-    pytestmark = _async_mark
-    async def test_timeline(self, seed_radar_data):
-        timeline = await query_request_timeline("db-req-001")
-        assert len(timeline) >= 4  # 2 queries + 2 user logs
-        types = {item["type"] for item in timeline}
-        assert "query" in types
-        assert "user_log" in types
-
-    async def test_timeline_sorted_by_offset(self, seed_radar_data):
-        timeline = await query_request_timeline("db-req-001")
-        offsets = [item.get("start_offset_ms") or 0 for item in timeline]
-        assert offsets == sorted(offsets)
-
-    async def test_timeline_with_exception(self, seed_radar_data):
-        timeline = await query_request_timeline("db-req-err-001")
-        types = {item["type"] for item in timeline}
-        assert "exception" in types
-
-    async def test_timeline_not_found(self, seed_radar_data):
-        timeline = await query_request_timeline("nonexistent-id")
-        assert timeline == []
-
-
 class TestQueryAllQueries:
     pytestmark = _async_mark
     async def test_list_all_queries(self, seed_radar_data):
@@ -238,27 +212,6 @@ class TestUpdateExceptionResolved:
     async def test_resolve_non_error_request(self, seed_radar_data):
         success = await update_exception_resolved("db-req-001", True)
         assert success is False
-
-
-class TestQueryUserLogs:
-    pytestmark = _async_mark
-    async def test_list_all_logs(self, seed_radar_data):
-        total, _ = await query_user_logs(page=1, page_size=50)
-        assert total >= 3
-
-    async def test_filter_by_level(self, seed_radar_data):
-        total, records = await query_user_logs(level="ERROR")
-        assert total >= 1
-        assert all(r["level"] == "ERROR" for r in records)
-
-    async def test_filter_by_level_case_insensitive(self, seed_radar_data):
-        total, _ = await query_user_logs(level="error")
-        assert total >= 1
-
-    async def test_pagination(self, seed_radar_data):
-        total, records = await query_user_logs(page=1, page_size=1)
-        assert len(records) == 1
-        assert total >= 3
 
 
 class TestQueryStats:
