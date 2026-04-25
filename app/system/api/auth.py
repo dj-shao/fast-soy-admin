@@ -40,8 +40,17 @@ async def _(credentials: CredentialsSchema, request: Request):
     return Success(data=result)
 
 
-@router.get("/error", summary="错误响应测试")
-async def _(code: str = "8888", msg: str = "用户状态失效，请重新登录"):
+@router.get("/error", summary="错误响应测试", include_in_schema=False)
+async def _(request: Request, code: str = "8888", msg: str = "用户状态失效，请重新登录"):
+    # 第一次返回指定错误码；同一客户端 + code 在 10s 内的第二次调用返回成功，
+    # 用于演示前端"过期 → 刷新 token → 自动重试"流程，避免重试时再次返回过期码导致死循环。
+    redis = request.app.state.redis
+    client_host = request.client.host if request.client else "anon"
+    key = f"auth_error_demo:{client_host}:{code}"
+    if await redis.get(key):
+        await redis.delete(key)
+        return Success(msg="重试成功")
+    await redis.set(key, "1", ex=10)
     return Fail(code=code, msg=msg)
 
 
