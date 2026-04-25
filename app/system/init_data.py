@@ -5,25 +5,75 @@ from app.system.models.dictionary import Dictionary
 from app.system.services import ensure_menu, ensure_role, ensure_user
 from app.system.services.init_helper import _safe_update_or_create
 
+
+def _crud_apis(resource: str, *, with_tree: bool = False) -> list[tuple[str, str]]:
+    """生成一组 CRUDRouter 标准路由的 (method, path)（不含 GET 详情，前端均无调用）。"""
+    base = f"/api/v1/system-manage/{resource}"
+    apis = [
+        ("post", f"{base}/search"),
+        ("post", base),
+        ("patch", f"{base}/{{item_id}}"),
+        ("delete", f"{base}/{{item_id}}"),
+        ("delete", base),
+    ]
+    if with_tree:
+        apis.append(("get", f"{base}/tree"))
+    return apis
+
+
 SYSTEM_ROLE_SEEDS = [
     {
         "role_name": "管理员",
         "role_code": "R_ADMIN",
-        "role_desc": "管理员",
+        "role_desc": "系统管理员，可维护用户/角色/菜单/API/字典/监控",
         "data_scope": DataScopeType.all,
-        "menus": ["home", "about", "manage", "manage_user", "manage_user-detail"],
+        "menus": [
+            "home",
+            "about",
+            "manage",
+            "manage_user",
+            "manage_user-detail",
+            "manage_role",
+            "manage_menu",
+            "manage_api",
+            "manage_radar",
+            "manage_radar_overview",
+            "manage_radar_requests",
+            "manage_radar_queries",
+            "manage_radar_exceptions",
+            "manage_radar_monitor",
+        ],
         "buttons": ["B_CODE2", "B_CODE3"],
         "apis": [
-            ("post", "/api/v1/system-manage/users/search"),
-            ("get", "/api/v1/system-manage/users/{item_id}"),
-            ("post", "/api/v1/system-manage/users"),
-            ("patch", "/api/v1/system-manage/users/{item_id}"),
+            # 用户
+            *_crud_apis("users"),
+            ("post", "/api/v1/system-manage/users/{user_id}/offline"),
+            ("post", "/api/v1/system-manage/users/batch-offline"),
+            # 角色
+            *_crud_apis("roles"),
+            ("get", "/api/v1/system-manage/roles/{role_id}/menus"),
+            ("patch", "/api/v1/system-manage/roles/{role_id}/menus"),
+            ("get", "/api/v1/system-manage/roles/{role_id}/buttons"),
+            ("patch", "/api/v1/system-manage/roles/{role_id}/buttons"),
+            ("get", "/api/v1/system-manage/roles/{role_id}/apis"),
+            ("patch", "/api/v1/system-manage/roles/{role_id}/apis"),
+            # 菜单
+            *_crud_apis("menus"),
+            ("get", "/api/v1/system-manage/menus/tree"),
+            ("get", "/api/v1/system-manage/menus/pages"),
+            ("get", "/api/v1/system-manage/menus/buttons/tree"),
+            # API
+            *_crud_apis("apis"),
+            ("get", "/api/v1/system-manage/apis/tree"),
+            ("get", "/api/v1/system-manage/apis/tags"),
+            # 字典
+            ("get", "/api/v1/system-manage/dictionaries/{dict_type}/options"),
         ],
     },
     {
         "role_name": "普通用户",
         "role_code": "R_USER",
-        "role_desc": "普通用户",
+        "role_desc": "未绑定员工身份的基础用户，仅可访问首页/关于",
         "data_scope": DataScopeType.self_,
         "menus": ["home", "about"],
     },
@@ -240,7 +290,6 @@ async def init_menus():
                 component="view.manage_api",
                 order=1,
                 icon="ant-design:api-outlined",
-                buttons=[dict(button_code="B_refreshAPI", button_desc="刷新API")],
             ),
             dict(menu_name="用户管理", route_name="manage_user", route_path="/manage/user", component="view.manage_user", order=2, icon="ic:round-manage-accounts"),
             dict(menu_name="角色管理", route_name="manage_role", route_path="/manage/role", component="view.manage_role", order=3, icon="carbon:user-role"),

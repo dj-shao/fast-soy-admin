@@ -40,6 +40,11 @@ async def _(credentials: CredentialsSchema, request: Request):
     return Success(data=result)
 
 
+@router.get("/error", summary="错误响应测试")
+async def _(code: str = "8888", msg: str = "用户状态失效，请重新登录"):
+    return Fail(code=code, msg=msg)
+
+
 @router.post("/captcha", summary="获取验证码")
 async def _(captcha_in: CaptchaRequest, request: Request):
     redis = request.app.state.redis

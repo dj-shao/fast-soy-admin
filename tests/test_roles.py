@@ -77,17 +77,6 @@ class TestRoleCRUD:
         data = resp.json()
         assert data["code"] == Code.DUPLICATE_ROLE_CODE
 
-    async def test_get_role(self, auth_client: AsyncClient, seed_data):
-        from app.system.controllers import role_controller
-
-        role = await role_controller.get_by_code("R_SUPER")
-        assert role is not None
-        resp = await auth_client.get(f"/api/v1/system-manage/roles/{encode_id(role.id)}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["roleCode"] == "R_SUPER"
-
     async def test_update_role(self, auth_client: AsyncClient, home_menu_id: str):
         # Create a role first
         create_resp = await auth_client.post(

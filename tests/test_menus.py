@@ -77,26 +77,6 @@ class TestMenuCRUD:
         data = resp.json()
         assert data["code"] == Code.DUPLICATE_MENU_ROUTE
 
-    async def test_get_menu(self, auth_client: AsyncClient):
-        # Create a menu to fetch
-        create_resp = await auth_client.post(
-            "/api/v1/system-manage/menus",
-            json={
-                "menuName": "GetMe",
-                "menuType": "2",
-                "routeName": "get_me_menu",
-                "routePath": "/get-me",
-                "status": "1",
-            },
-        )
-        menu_id = create_resp.json()["data"]["createdId"]
-
-        resp = await auth_client.get(f"/api/v1/system-manage/menus/{menu_id}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["menuName"] == "GetMe"
-
     async def test_update_menu(self, auth_client: AsyncClient):
         # Create
         create_resp = await auth_client.post(

@@ -10,8 +10,12 @@
 
 from __future__ import annotations
 
+import asyncio
+from functools import reduce
+from operator import or_
 from typing import Any, TypeVar
 
+from tortoise.expressions import Q
 from tortoise.models import Model
 
 from app.core.base_model import GenderType, IconType, MenuType
@@ -174,41 +178,48 @@ async def ensure_role(
         defaults,
     )
 
-    if menus is not None:
+    # 批量解析菜单/按钮/API，并发执行清空 → 重新挂载，避免逐条 query 的 N+1
+    async def _sync_menus() -> None:
+        if menus is None:
+            return
+        found = await Menu.filter(route_name__in=menus)
+        by_name = {m.route_name: m for m in found}
+        missing = [rn for rn in menus if rn not in by_name]
         await role.by_role_menus.clear()  # type: ignore[attr-defined]
-        missing_menus: list[str] = []
-        for rn in menus:
-            menu = await Menu.filter(route_name=rn).first()
-            if menu:
-                await role.by_role_menus.add(menu)  # type: ignore[attr-defined]
-            else:
-                missing_menus.append(rn)
-        if missing_menus:
-            log.warning(f"ensure_role '{role_code}': missing menus {missing_menus} (route renamed or deleted?)")
+        if found:
+            await role.by_role_menus.add(*found)  # type: ignore[attr-defined]
+        if missing:
+            log.warning(f"ensure_role '{role_code}': missing menus {missing} (route renamed or deleted?)")
 
-    if buttons is not None:
+    async def _sync_buttons() -> None:
+        if buttons is None:
+            return
+        found = await Button.filter(button_code__in=buttons)
+        by_code = {b.button_code: b for b in found}
+        missing = [c for c in buttons if c not in by_code]
         await role.by_role_buttons.clear()  # type: ignore[attr-defined]
-        missing_buttons: list[str] = []
-        for code in buttons:
-            btn = await Button.filter(button_code=code).first()
-            if btn:
-                await role.by_role_buttons.add(btn)  # type: ignore[attr-defined]
-            else:
-                missing_buttons.append(code)
-        if missing_buttons:
-            log.warning(f"ensure_role '{role_code}': missing buttons {missing_buttons} (button_code renamed or deleted?)")
+        if found:
+            await role.by_role_buttons.add(*found)  # type: ignore[attr-defined]
+        if missing:
+            log.warning(f"ensure_role '{role_code}': missing buttons {missing} (button_code renamed or deleted?)")
 
-    if apis is not None:
+    async def _sync_apis() -> None:
+        if apis is None:
+            return
+        if apis:
+            cond = reduce(or_, (Q(api_method=m, api_path=p) for m, p in apis))
+            found = await Api.filter(cond)
+        else:
+            found = []
+        by_key = {(a.api_method, a.api_path): a for a in found}
+        missing = [(m, p) for m, p in apis if (m, p) not in by_key]
         await role.by_role_apis.clear()  # type: ignore[attr-defined]
-        missing_apis: list[tuple[str, str]] = []
-        for method, path in apis:
-            api = await Api.filter(api_method=method, api_path=path).first()
-            if api:
-                await role.by_role_apis.add(api)  # type: ignore[attr-defined]
-            else:
-                missing_apis.append((method, path))
-        if missing_apis:
-            log.warning(f"ensure_role '{role_code}': missing apis {missing_apis} (route signature changed?)")
+        if found:
+            await role.by_role_apis.add(*found)  # type: ignore[attr-defined]
+        if missing:
+            log.warning(f"ensure_role '{role_code}': missing apis {missing} (route signature changed?)")
+
+    await asyncio.gather(_sync_menus(), _sync_buttons(), _sync_apis())
 
     log.info(f"ensure_role: {'created' if created else 'updated'} role '{role_code}'")
 

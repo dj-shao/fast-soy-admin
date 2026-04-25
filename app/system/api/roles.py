@@ -26,6 +26,7 @@ crud = CRUDRouter(
         exact_fields=["status_type"],
     ),
     summary_prefix="角色",
+    enable_routes={"list", "create", "update", "delete", "batch_delete"},
 )
 router = crud.router
 

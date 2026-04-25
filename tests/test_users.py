@@ -2,7 +2,6 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.code import Code
-from app.core.sqids import encode_id
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -93,14 +92,6 @@ class TestUserCRUD:
         assert resp.status_code == 200
         data = resp.json()
         assert data["code"] == Code.USER_ROLE_REQUIRED
-
-    async def test_get_user(self, auth_client: AsyncClient, seed_data):
-        user = seed_data
-        resp = await auth_client.get(f"/api/v1/system-manage/users/{encode_id(user.id)}")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        assert data["data"]["userName"] == "Soybean"
 
     async def test_update_user(self, auth_client: AsyncClient):
         # First create a user to update

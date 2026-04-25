@@ -23,6 +23,7 @@ crud = CRUDRouter(
         exact_fields=["menu_type", "status_type"],
     ),
     summary_prefix="菜单",
+    enable_routes={"list", "create", "update", "delete", "batch_delete"},
 )
 router = crud.router
 
