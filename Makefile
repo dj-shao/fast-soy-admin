@@ -105,6 +105,26 @@ dev: ## Start backend + frontend dev servers (parallel)
 	@echo "Starting backend (port 9999) and frontend (port 9527)..."
 	@trap 'kill 0' EXIT; uv run python run.py & (cd web && pnpm dev) & wait
 
+.PHONY: e2e-initdb
+e2e-initdb: ## (internal) Reset E2E sqlite and create schema from current models (no migrations)
+	@rm -f app_system_e2e.sqlite3
+	@DB_URL='sqlite://app_system_e2e.sqlite3?busy_timeout=5000' \
+		REDIS_URL='$(or $(REDIS_URL),redis://127.0.0.1:6379/15)' \
+		APP_DEBUG=false \
+		uv run python scripts/e2e_init_db.py
+
+.PHONY: e2e
+e2e: e2e-initdb ## Run Playwright E2E tests (auto-starts backend + frontend, uses app_system_e2e.sqlite3)
+	cd web && pnpm e2e
+
+.PHONY: e2e-ui
+e2e-ui: e2e-initdb ## Run Playwright in UI mode for local debugging
+	cd web && pnpm e2e:ui
+
+.PHONY: e2e-install
+e2e-install: ## Install Playwright browsers (chromium)
+	cd web && pnpm e2e:install
+
 .PHONY: install-all
 install-all: install web-install ## Install all dependencies (backend + frontend)
 

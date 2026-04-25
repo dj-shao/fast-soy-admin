@@ -73,3 +73,72 @@ jobs:
 
       - name: vue-tsc type check
         run: pnpm typecheck
+
+  e2e:
+    name: E2E (Playwright, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      REDIS_URL: redis://127.0.0.1:6379/15
+      DB_URL: sqlite://app_system_e2e.sqlite3?busy_timeout=5000
+      APP_DEBUG: "false"
+      GUARD_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install backend deps
+        run: uv sync --frozen
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (chromium)
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Init E2E database
+        run: |
+          rm -f app_system_e2e.sqlite3
+          uv run python scripts/e2e_init_db.py
+
+      - name: Run Playwright
+        working-directory: web
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
