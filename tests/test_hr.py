@@ -63,16 +63,6 @@ class TestDepartmentCRUD:
         assert resp.status_code == 200
         assert resp.json()["code"] == "0000"
 
-    async def test_department_stats(self, auth_client: AsyncClient, hr_data):
-        resp = await auth_client.get(f"{PREFIX}/departments/stats")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["code"] == "0000"
-        stats = data["data"]
-        assert len(stats) >= 1
-        eng = next((s for s in stats if s["code"] == "ENG"), None)
-        assert eng is not None
-        assert eng["employeeCount"] >= 1
 
 
 # ===================== Tag CRUD =====================

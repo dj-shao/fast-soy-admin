@@ -110,7 +110,6 @@ HR_ADMIN_APIS = [
     ("patch", "/api/v1/business/hr/departments/{item_id}"),
     ("delete", "/api/v1/business/hr/departments/{item_id}"),
     ("delete", "/api/v1/business/hr/departments"),
-    ("get", "/api/v1/business/hr/departments/stats"),
     # 员工
     ("post", "/api/v1/business/hr/employees/search"),
     ("get", "/api/v1/business/hr/employees/{item_id}"),

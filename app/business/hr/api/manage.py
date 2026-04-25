@@ -20,7 +20,7 @@ from app.business.hr.schemas import (
     TagSearch,
     TagUpdate,
 )
-from app.business.hr.services import create_employee, get_department_stats, list_employees_with_relations, transition_employee, update_employee
+from app.business.hr.services import create_employee, list_employees_with_relations, transition_employee, update_employee
 from app.core.config import APP_SETTINGS
 from app.core.sqids import encode_id
 from app.utils import (
@@ -102,14 +102,6 @@ async def _list_employees(obj_in: EmployeeSearch, request: Request):
 
 
 router = APIRouter(prefix="/hr", tags=["HR管理"], dependencies=[DependPermission])
-
-
-# 将具体路径定义在参数化路由（{item_id}）之前，以避免路由匹配冲突
-@router.get("/departments/stats", summary="部门统计")
-async def dept_stats(request: Request):
-    """部门统计 — 结果缓存在 Redis 中（5 分钟 TTL），员工数据变更时自动失效。"""
-    stats = await get_department_stats(redis=request.app.state.redis)
-    return Success(data=stats)
 
 
 router.include_router(dept_crud.router)
