@@ -370,6 +370,43 @@ router = dept_crud.router
 
 标准 CRUD 之外的接口（如 `POST /warehouses/batch-offline`）直接写在 `router` 上，**不要**塞进 `CRUDRouter`。
 
+#### 适用边界（避免抽象上瘾）
+
+`CRUDRouter` 只服务**贫血资源**——字典、标签、部门、分类这种纯 CRUD 表。聚合根（用户、角色、订单、工单等带状态、带副作用的资源）**不要硬塞**。满足以下任一条件，立刻改写为显式 `@router.post(...)` + `services/`：
+
+- override 数 ≥ 3（标准 6 路由覆盖一半，抽象已无收益）
+- 任一 override 内出现 `in_transaction` / `redis` / 跨模型写
+- 资源是聚合根或带状态机
+- 写操作有副作用（发通知、写审计、触发事件、失效缓存）
+
+**`@crud.override` 内禁止出现的内容**（必须下沉到 `services/`）：
+
+- `in_transaction(...)` —— 事务编排是 service 的事
+- `request.app.state.redis` / 任何 Redis 客户端调用
+- 跨模型的 `create` / `update` / `delete`（含 `m2m.add` / `m2m.clear`）
+- 调用其他模块的 service / 发事件 / 写审计
+
+正确范式 —— override 只做"参数转发 + 包响应"，业务在 service 里：
+
+```python
+# services/users.py
+async def create_user_with_roles(redis, user_in: UserCreate) -> User:
+    if await user_controller.get_by_email(user_in.user_email):
+        raise BizError(code=Code.DUPLICATE_USER_EMAIL, msg="该邮箱已被注册")
+    async with in_transaction(get_db_conn(User)):
+        user = await user_controller.create(obj_in=user_in)
+        await user_controller.update_roles_by_code(user, user_in.by_user_role_code_list)
+    return user
+
+# api/users.py
+@crud.override("create")
+async def _create_user(user_in: UserCreate, request: Request):
+    user = await create_user_with_roles(request.app.state.redis, user_in)
+    return Success(msg="创建成功", data={"createdId": encode_id(user.id)})
+```
+
+参考实现：`app/system/api/users.py` + `app/system/services/user.py`、`app/system/api/apis.py` + `app/system/services/api.py`。
+
 ### 5.7 鉴权依赖
 
 | 依赖 | 用途 |
@@ -440,9 +477,9 @@ OpenAPI 生成准确响应模型：在路由上加 `response_model=ResponseModel
 |---|---|
 | `0000` | 成功 |
 | `1000–1999` | 系统内部错误（异常捕获、入参校验失败） |
-| `2000–2999` | 业务逻辑错误（认证、授权、资源冲突、业务失败） |
+| `2000–2999` | 框架内置业务错误（认证、授权、资源冲突、Schema 必填等） |
 | `3000–3999` | 框架预留 |
-| `4000–9999` | 项目自定义业务码（框架不使用） |
+| `4000–9999` | 项目 / 业务模块自定义码（业务模块码必须从 `4000` 起，**不得**占用 `2xxx`） |
 
 ### 1xxx — 系统内部错误
 
@@ -524,20 +561,20 @@ OpenAPI 生成准确响应模型：在路由上加 `response_model=ResponseModel
 | `2603` | `USER_ROLE_REQUIRED` | 用户至少需要一个角色 |
 | `2604–2608` | `USER_EMAIL_REQUIRED` / `ROLE_NAME_REQUIRED` / `ROLE_CODE_REQUIRED` / `ROUTE_NAME_REQUIRED` / `ROUTE_PATH_REQUIRED` | 对应字段必填 |
 
-### 27xx — HR 业务（业务模块码示例）
+### 40xx — HR 业务（业务模块码示例）
 
 | 码 | 常量 | 说明 |
 |---|---|---|
-| `2700` | `HR_DEPARTMENT_REQUIRED` | 超级管理员创建员工需指定部门 |
-| `2701` | `HR_MANAGER_REQUIRED` | 仅部门主管可创建员工 |
-| `2702` | `HR_CREATE_FORBIDDEN` | 无权限创建员工 |
-| `2703` | `HR_TAGS_EXCEED_LIMIT` | 员工标签数量超出上限 |
-| `2704` | `HR_EMPLOYEE_NOT_IN_DEPT` | 该员工不在当前主管部门中 |
-| `2705` | `HR_USER_NOT_EMPLOYEE` | 当前用户未关联员工信息 |
-| `2706` | `HR_MANAGER_ONLY` | 仅部门主管可执行此操作 |
-| `2707` | `HR_INVALID_TRANSITION` | 不允许的状态流转 |
+| `4000` | `HR_DEPARTMENT_REQUIRED` | 超级管理员创建员工需指定部门 |
+| `4001` | `HR_MANAGER_REQUIRED` | 仅部门主管可创建员工 |
+| `4002` | `HR_CREATE_FORBIDDEN` | 无权限创建员工 |
+| `4003` | `HR_TAGS_EXCEED_LIMIT` | 员工标签数量超出上限 |
+| `4004` | `HR_EMPLOYEE_NOT_IN_DEPT` | 该员工不在当前主管部门中 |
+| `4005` | `HR_USER_NOT_EMPLOYEE` | 当前用户未关联员工信息 |
+| `4006` | `HR_MANAGER_ONLY` | 仅部门主管可执行此操作 |
+| `4007` | `HR_INVALID_TRANSITION` | 不允许的状态流转 |
 
-> 业务模块约定：在 `app/core/code.py` 末尾分配本模块的码段（如 `28xx`、`29xx`），**不要**反复 `Code.FAIL`。每个失败场景一个唯一码。
+> 业务模块约定：业务码统一从 `4000` 起（不得占用 `2xxx` 系统段），在 `app/core/code.py` 末尾追加本模块的码段（如 `41xx`、`42xx`），**不要**反复 `Code.FAIL`。每个失败场景一个唯一码。
 
 ### 抛出方式
 
@@ -1152,6 +1189,7 @@ server {
 12. 业务自有缓存按 `<module>_<resource>:<scope>` 命名，读 → miss → 查 → 写 TTL，变更时主动失效；不要给分页接口加全局 `@cache(...)`
 13. 关键节点 / 权限拒绝用 `radar_log(...)`；高频调试 `log.debug`；不要 `print(...)`
 14. 所有函数加类型注解；`make check-all` 必须全绿（ruff + basedpyright + pytest + eslint + oxlint + vue-tsc）
+15. `@crud.override` 内禁止出现 `in_transaction` / `request.app.state.redis` / 跨模型写 / 事件 / 审计——这些必须在 `services/` 实现，api 层只做参数转发与响应封装；override 数 ≥ 3 或资源是聚合根时，应改为显式 `@router.post(...)` + `services/`，不要硬塞 CRUDRouter
 
 ---
 

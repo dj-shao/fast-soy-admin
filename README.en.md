@@ -182,8 +182,7 @@ All endpoints share the shape `{"code": "xxxx", "msg": "...", "data": ...}` with
 | `24xx`      | Generic business failure                        | Show error toast                   |
 | `25xx`      | Rate-limit / security                           | Show error toast                   |
 | `26xx`      | Schema required-field fallback                  | Show error toast                   |
-| `27xx`      | HR business codes (example business range)      | Show error toast                   |
-| `4000–9999` | User-defined                                    | Handled by callers                 |
+| `4000–9999` | User-defined (business module codes start at `4000`; HR sample: `4000–4007`) | Handled by callers |
 
 See [response codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/codes).
 

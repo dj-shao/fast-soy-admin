@@ -294,6 +294,45 @@ async def _list(obj_in: DepartmentSearch):
 router = dept_crud.router
 ```
 
+#### CRUDRouter 适用边界（避免抽象上瘾）
+
+CRUDRouter 是给**贫血资源**用的——字典、标签、部门、分类这种纯 CRUD 表。聚合根（用户、角色、订单、工单等带状态、带副作用的资源）**不要硬塞进 CRUDRouter**。
+
+满足以下任一条件，立刻把该资源改写为显式 `@router.post(...)` + `services/`，不要继续 `@crud.override`：
+
+- override 数 ≥ 3（标准 6 路由覆盖一半，抽象已无收益）
+- 任一 override 内出现 `in_transaction` / `redis` / 跨模型写
+- 资源是聚合根或带状态机
+- 写操作有副作用（发通知、写审计、触发事件、失效缓存）
+
+**`@crud.override` 内禁止出现的内容**（必须下沉到 `services/`）：
+
+- `in_transaction(...)` —— 事务编排是 service 的事
+- `request.app.state.redis` / 任何 Redis 客户端调用
+- 跨模型的 `create` / `update` / `delete`（含 `m2m.add` / `m2m.clear`）
+- 调用其他模块的 service / 发事件 / 写审计
+
+**正确范式**：override 只做"参数转发 + 包响应"，业务在 service 里：
+
+```python
+# services/users.py
+async def create_user_with_roles(redis, user_in: UserCreate) -> User:
+    if await user_controller.get_by_email(user_in.user_email):
+        raise BizError(code=Code.DUPLICATE_USER_EMAIL, msg="该邮箱已被注册")
+    async with in_transaction(get_db_conn(User)):
+        user = await user_controller.create(obj_in=user_in)
+        await user_controller.update_roles_by_code(user, user_in.by_user_role_code_list)
+    return user
+
+# api/users.py
+@crud.override("create")
+async def _create_user(user_in: UserCreate, request: Request):
+    user = await create_user_with_roles(request.app.state.redis, user_in)
+    return Success(msg="创建成功", data={"createdId": encode_id(user.id)})
+```
+
+参考实现：[app/system/api/users.py](app/system/api/users.py) + [app/system/services/user.py](app/system/services/user.py)、[app/system/api/apis.py](app/system/api/apis.py) + [app/system/services/api.py](app/system/services/api.py)。
+
 ### 鉴权
 
 - `DependAuth` — 仅 JWT 校验（登录态）
@@ -318,8 +357,7 @@ router = dept_crud.router
 | `2400–2406` | 通用业务失败（`WRONG_CREDENTIALS` / `OLD_PASSWORD_WRONG` 等） |
 | `2500–2502` | 限流 / 安全（`RATE_LIMITED` / `IP_BANNED`） |
 | `2600–2608` | Schema 必填（`PARAM_REQUIRED` / `USERNAME_REQUIRED` 等） |
-| `2700–27xx` | HR 业务模块示例 |
-| `4000–9999` | 项目自定义 |
+| `4000–9999` | 项目自定义（业务模块码必须从 `4000` 起，不得占用 `2xxx`）。HR 业务模块示例：`4000–4007` |
 
 **每个失败场景分配唯一业务码**（追加到 `app/core/code.py` 末尾），避免反复 `Code.FAIL` 兜底。抛异常推荐 `raise BizError(code=Code.X, msg="...")`（任意层穿透）；`return Fail(...)` 仅在 api 层用；Schema 校验器用 `SchemaValidationError`（**不是** `ValueError`）。
 
@@ -341,6 +379,7 @@ router = dept_crud.router
 12. 业务自有缓存按 `<module>_<resource>:<scope>` 命名，读 → miss → 查 → 写 TTL，变更时主动失效；不要给分页接口加全局 `@cache(...)`
 13. 关键节点 / 权限拒绝用 `radar_log(...)`；高频调试 `log.debug`；不要 `print(...)`
 14. 所有函数加类型注解；`make check-all` 必须全绿（ruff + basedpyright + pytest + eslint + oxlint + vue-tsc）
+15. `@crud.override` 内禁止出现 `in_transaction` / `request.app.state.redis` / 跨模型写 / 事件 / 审计——这些必须在 `services/` 实现，api 层只做参数转发与响应封装；override 数 ≥ 3 或资源是聚合根时，应改为显式 `@router.post(...)` + `services/`，不要硬塞 CRUDRouter
 
 ## 配置
 

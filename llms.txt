@@ -29,7 +29,7 @@ Single self-contained file for LLMs: [llms-full.md](llms-full.md)
 - [Development Guide](https://sleep1223.github.io/fast-soy-admin-docs/backend/development): End-to-end CLI flow for a new business module
 - [Commands](https://sleep1223.github.io/fast-soy-admin-docs/backend/commands): Makefile reference (`make cli-init/gen/gen-web`, dev, check)
 - [API Conventions](https://sleep1223.github.io/fast-soy-admin-docs/backend/api): URL rules, response format, pagination, sqid IDs, CRUDRouter
-- [Response Codes](https://sleep1223.github.io/fast-soy-admin-docs/backend/codes): 0000 / 1xxx / 21xx–27xx code segments, frontend code→behavior mapping
+- [Response Codes](https://sleep1223.github.io/fast-soy-admin-docs/backend/codes): 0000 / 1xxx / 21xx–26xx system segments + 4xxx project-defined (HR sample 40xx), frontend code→behavior mapping
 - [Auth & Permissions](https://sleep1223.github.io/fast-soy-admin-docs/backend/auth): JWT, DependAuth / DependPermission, require_buttons / require_roles, token_version
 - [RBAC](https://sleep1223.github.io/fast-soy-admin-docs/backend/rbac): User ↔ Role ↔ Menu / Button / Api
 - [Data Scope](https://sleep1223.github.io/fast-soy-admin-docs/backend/data-scope): Row-level access control (all / department / self / custom)
