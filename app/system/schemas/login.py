@@ -35,7 +35,7 @@ class RegisterSchema(SchemaBase):
     phone: Annotated[str, Field(max_length=20)] = Field(title="手机号")
     code: Annotated[str, Field(max_length=10)] = Field(title="验证码")
     password: Annotated[str, Field(max_length=128)] = Field(title="密码")
-    user_name: Annotated[str, Field(max_length=20)] | None = Field(None, title="用户名")
+    user_name: str = Field("", max_length=20, title="用户名")
 
 
 __all__ = ["CredentialsSchema", "JWTOut", "JWTPayload", "CaptchaRequest", "CodeLoginSchema", "RegisterSchema"]

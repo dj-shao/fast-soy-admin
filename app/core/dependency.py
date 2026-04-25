@@ -16,7 +16,7 @@ from app.system.models import StatusType, User
 from app.system.radar.ctx import CTX_RADAR
 from app.system.radar.developer import radar_log
 
-oauth2_schema = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+oauth2_schema = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/swagger-login", auto_error=False)
 
 
 def check_token(token: str) -> tuple[bool, str, Any]:

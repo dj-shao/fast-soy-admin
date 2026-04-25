@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.base_schema import Fail, Success
 from app.core.code import Code
@@ -38,6 +39,19 @@ async def _(credentials: CredentialsSchema, request: Request):
     result = tokens.model_dump(by_alias=True)
     result["mustChangePassword"] = user_obj.must_change_password
     return Success(data=result)
+
+
+@router.post("/swagger-login", summary="Swagger OAuth2 登录（仅供 docs 调试）")
+async def _(request: Request, form: OAuth2PasswordRequestForm = Depends()):
+    """符合 OAuth2 Password Flow 规范，返回 ``{access_token, token_type}``，
+    供 Swagger UI 的 Authorize 自动注入 ``Authorization: Bearer <token>``。"""
+    user_obj, tokens = await login_with_credentials(
+        request.app.state.redis,
+        user_name=form.username,
+        password=form.password,
+    )
+    radar_log("Swagger 登录成功", data={"userName": user_obj.user_name, "userId": user_obj.id})
+    return {"access_token": tokens.token, "token_type": "bearer"}
 
 
 @router.get("/error", summary="错误响应测试", include_in_schema=False)

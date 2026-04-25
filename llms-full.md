@@ -462,7 +462,7 @@ OpenAPI 生成准确响应模型：在路由上加 `response_model=ResponseModel
 | 用户 | `/users` | `create / update` 走 `@override` 注入密码哈希 + 角色关联 |
 | 角色 | `/roles` | 含 `GET /roles/{id}/menus`、`PATCH /roles/{id}/menus` 等子资源 |
 | 菜单 | `/menus` | 含 `GET /menus/tree`、`GET /menus/pages` |
-| API | `/apis` | 含 `POST /apis/refresh`（手动触发对账） |
+| API | `/apis` | **只读**（`list / get / tree / tags`），由启动时 `refresh_api_list()` 全量对账维护 |
 | 字典 | `/dictionaries` | 含 `GET /dictionaries/{type}/options`（带 5 分钟 Redis 缓存） |
 
 ---
@@ -505,7 +505,7 @@ OpenAPI 生成准确响应模型：在路由上加 `response_model=ResponseModel
 | `2105` | `NOT_REFRESH_TOKEN` | 传入的不是刷新令牌 | — |
 | `2106` | `SESSION_INVALIDATED` | `token_version` 已递增，旧 token 失效 | 跳转登录 |
 
-前端 `.env`：`VITE_SERVICE_LOGOUT_CODES=2100,2101`、`VITE_SERVICE_MODAL_LOGOUT_CODES=2102`、`VITE_SERVICE_EXPIRED_TOKEN_CODES=2103`。
+前端 `.env`：`VITE_SERVICE_LOGOUT_CODES=2100,2101,2104,2105`、`VITE_SERVICE_MODAL_LOGOUT_CODES=2102,2106`、`VITE_SERVICE_EXPIRED_TOKEN_CODES=2103`。
 
 ### 22xx — 授权
 
@@ -917,8 +917,8 @@ async def init():
 | 变量 | 默认值 | 行为 |
 |---|---|---|
 | `VITE_SERVICE_SUCCESS_CODE` | `0000` | 视为成功，提取 `data` |
-| `VITE_SERVICE_LOGOUT_CODES` | `2100,2101` | 直接登出 |
-| `VITE_SERVICE_MODAL_LOGOUT_CODES` | `2102` | 弹窗提示后登出 |
+| `VITE_SERVICE_LOGOUT_CODES` | `2100,2101,2104,2105` | 直接登出 |
+| `VITE_SERVICE_MODAL_LOGOUT_CODES` | `2102,2106` | 弹窗提示后登出 |
 | `VITE_SERVICE_EXPIRED_TOKEN_CODES` | `2103` | 自动用 refresh token 刷新并重试 |
 | 其他 | — | 显示 `msg` 错误消息 |
 
