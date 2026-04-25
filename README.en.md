@@ -54,7 +54,7 @@ Great as a starting point for internal tools, and as a reference for modern full
 - [Quick start](https://sleep1223.github.io/fast-soy-admin-docs/en/guide/quick-start)
 - [Development guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/development)
 - [Commands reference](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/commands)
-- [Apifox API docs](https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b)
+- [Apidog API docs](https://fast-soy-admin.apidog.io)
 
 ## Branches
 

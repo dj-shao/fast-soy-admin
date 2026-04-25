@@ -54,7 +54,7 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
 - [快速开始](https://sleep1223.github.io/fast-soy-admin-docs/guide/quick-start)
 - [开发指南](https://sleep1223.github.io/fast-soy-admin-docs/backend/development)
 - [命令参考](https://sleep1223.github.io/fast-soy-admin-docs/backend/commands)
-- [Apifox 接口文档](https://apifox.com/apidoc/shared-7cd78102-46eb-4701-88b1-3b49c006504b)
+- [Apidog 接口文档](https://fast-soy-admin.apidog.io)
 
 ## 分支说明
 
