@@ -10,7 +10,7 @@ from enum import Enum
 from tortoise import fields
 
 from app.core.base_model import TreeMixin
-from app.core.soft_delete import SoftDeleteMixin
+from app.core.soft_delete import SoftDeleteManager, SoftDeleteMixin
 from app.utils import AuditMixin, BaseModel, StatusType
 
 
@@ -39,6 +39,7 @@ class Department(BaseModel, AuditMixin, TreeMixin, SoftDeleteMixin):
 
     class Meta:
         table = "biz_department"
+        manager = SoftDeleteManager()
 
 
 class Tag(BaseModel, AuditMixin):
@@ -103,3 +104,4 @@ class Employee(BaseModel, AuditMixin, SoftDeleteMixin):
 
     class Meta:
         table = "biz_employee"
+        manager = SoftDeleteManager()

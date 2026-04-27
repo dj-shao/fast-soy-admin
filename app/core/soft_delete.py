@@ -8,11 +8,17 @@
 
 用法::
 
-    from app.core.soft_delete import SoftDeleteMixin
+    from app.core.soft_delete import SoftDeleteManager, SoftDeleteMixin
 
     class Department(BaseModel, AuditMixin, SoftDeleteMixin):
         name = fields.CharField(max_length=100, unique=True)
         ...
+
+        class Meta:
+            table = "biz_department"
+            # 必须在子类 Meta 中显式声明 — Tortoise 不会从抽象 mixin 的 Meta
+            # 合并 manager（``ModelMeta.__new__`` 只读取子类自身的 Meta）
+            manager = SoftDeleteManager()
 
     # 软删除
     await department_controller.soft_remove(id=1)
@@ -50,7 +56,9 @@ class SoftDeleteManager(Manager):
 class SoftDeleteMixin:
     """软删除 Mixin。
 
-    添加 ``deleted_at`` 字段，并将默认 Manager 替换为 ``SoftDeleteManager``。
+    添加 ``deleted_at`` 字段。**子类必须在自己的 ``Meta`` 中显式声明
+    ``manager = SoftDeleteManager()``** —— Tortoise 不会从抽象 mixin 的
+    Meta 合并 ``manager``。
 
     通过 ``all_objects``（原生 Manager）可访问包含已删除记录的全量数据::
 
