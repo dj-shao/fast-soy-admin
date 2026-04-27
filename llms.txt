@@ -1,6 +1,6 @@
 # FastSoyAdmin
 
-> Full-stack admin template: FastAPI (Python 3.12+) + Vue3 (TypeScript). Layered backend with auto-discovered business modules, CLI-driven CRUD code generation, three-level RBAC (menu / button / API) plus row-level data scope, Redis-backed permission cache, multi-worker startup lock, built-in Radar request/SQL/exception dashboard, and Docker Compose deployment.
+> Full-stack admin template: FastAPI (Python 3.12+) + Vue3 (TypeScript). Layered backend with autodiscovered business modules, CLI-driven CRUD codegen, three-tier RBAC (menu / button / API) + row-level data scope, Redis-cached permissions, multi-worker startup lock, built-in Radar dashboard, Docker Compose deploy.
 
 - Source: https://github.com/sleep1223/fast-soy-admin
 - Preview: https://fast-soy-admin.sleep0.de/
@@ -10,8 +10,8 @@
 - License: MIT
 
 Branches:
-- `main` — default branch, ships with example business module `app/business/hr/` (employees / departments / tags)
-- `slim` — clean template skeleton with no example modules (coming soon)
+- `main` — default; ships HR example (`app/business/hr/`)
+- `slim` — clean skeleton, no examples (in preparation)
 
 ## Consolidated context
 
@@ -85,21 +85,21 @@ Single self-contained file for LLMs: [llms-full.md](llms-full.md)
 
 ## Tech Stack
 
-Backend: Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x (vendored at `/tortoise-orm/`), Redis (fastapi-cache2), Argon2, PyJWT (HS256), Sqids, Granian, fastapi-guard, built-in Radar dashboard, Ruff, basedpyright (standard), uv.
-Frontend: Vue 3.5, Vite 7, TypeScript 5.9, Naive UI, Pinia 3, UnoCSS, Alova, Elegant Router, vue-i18n, ECharts 6, ESLint + oxlint, vue-tsc, pnpm workspaces.
-DevOps: Docker Compose (Nginx :1880 + FastAPI :9999 + Redis), `Makefile` as single entrypoint for every command.
+- Backend: Python 3.12+, FastAPI, Pydantic v2, Tortoise ORM 1.x (vendored at `/tortoise-orm/`), Redis (fastapi-cache2), Argon2, PyJWT (HS256), Sqids, Granian, fastapi-guard, Radar dashboard, Ruff, basedpyright (standard), uv.
+- Frontend: Vue 3.5, Vite 7, TypeScript 5.9, Naive UI, Pinia 3, UnoCSS, Alova, Elegant Router, vue-i18n, ECharts 6, ESLint + oxlint, vue-tsc, pnpm workspaces.
+- DevOps: Docker Compose (Nginx :1880 + FastAPI :9999 + Redis); `Makefile` is the single entrypoint.
 
 ## Architecture
 
-Monorepo: backend at `/app`, frontend under `/web` (pnpm workspaces).
+Monorepo: `/app` backend, `/web` frontend (pnpm workspaces).
 
-Backend layers: `api/` → `services/` → `controllers/` (CRUDBase) → `models` + `schemas`. System modules in `app/system/`, business modules in `app/business/<name>/` are autodiscovered at startup. `app.system` never imports `app.business`; business modules import via `app.utils` and must not import sibling business modules (use the event bus).
+Backend layers: `api/` → `services/` → `controllers/` (CRUDBase) → `models + schemas`. `app/system/` for system modules; `app/business/<name>/` autodiscovered at startup. `app.system` never imports `app.business`; business modules import via `app.utils`, never sibling modules (use the event bus).
 
-RBAC: `User ↔ Role ↔ {Menu, Button, Api}`. `R_SUPER` bypasses all checks. API permissions are automatically reconciled against FastAPI routes on startup (`refresh_api_list()`); menus / buttons are declared per-module via `ensure_menu()` with optional `reconcile_menu_subtree()` for IaC subtrees. Roles are upserted via `ensure_role()`. Row-level `data_scope` (`all / department / self / custom`) is applied via `build_scope_filter`.
+RBAC: `User ↔ Role ↔ {Menu, Button, Api}`. `R_SUPER` bypasses all checks. APIs are reconciled against FastAPI routes on startup (`refresh_api_list()`); menus / buttons are declared per-module via `ensure_menu()` with optional `reconcile_menu_subtree()` for IaC subtrees; roles are upserted via `ensure_role()`. Row-level `data_scope` (`all / department / self / custom`) applied via `build_scope_filter`.
 
-Response contract: `{"code": "0000", "msg": "OK", "data": {...}}`, HTTP status always 200. Resource IDs are sqid strings (not auto-increment ints). Fields are camelCase across the HTTP boundary (automatic via `SchemaBase`). JWT: access 12h, refresh 7d, HS256, versioned via `token_version:{uid}` in Redis.
+Response contract: `{"code": "0000", "msg": "OK", "data": {...}}`, HTTP status always 200. Resource IDs are sqid strings. Fields camelCase across the HTTP boundary (`SchemaBase`). JWT: access 12h, refresh 7d, HS256, versioned via `token_version:{uid}` in Redis.
 
-Frontend: Views → Pinia stores → Alova service → HTTP. Dynamic routes are fetched after login from `/api/v1/route/user-routes`; constant routes from `/api/v1/route/constant-routes`. Elegant Router auto-generates routes from `views/` file structure (route name `module_page`). Auto token refresh on code `2103`, auto logout on `2100 / 2101`, modal logout on `2102`.
+Frontend: Views → Pinia → Alova → HTTP. Dynamic routes from `/api/v1/route/user-routes`, constant routes from `/api/v1/route/constant-routes`. Elegant Router auto-generates routes from `views/` (name `module_page`). Token auto-refresh on code `2103`; auto-logout on `2100 / 2101`; modal logout on `2102`.
 
 ## Quick Start
 
@@ -107,24 +107,23 @@ Docker (recommended):
 ```
 git clone https://github.com/sleep1223/fast-soy-admin && cd fast-soy-admin
 make up                                                   # nginx :1880, fastapi :9999, redis :6379
-docker compose exec app uv run python -m app.cli initdb   # first-run only, tables + seed
+docker compose exec app uv run python -m app.cli initdb   # first run only
 docker compose restart app
 ```
 
 Local development:
 ```
-make install-all  # backend (uv sync) + frontend (pnpm install)
-make initdb       # first-time database bootstrap
-make dev          # parallel backend :9999 + frontend :9527
+make install-all  # uv sync + pnpm install
+make initdb       # first-time DB bootstrap
+make dev          # backend :9999 + frontend :9527
 ```
 
 New business module:
 ```
 make cli-init MOD=inventory                  # scaffold app/business/inventory/
 # edit app/business/inventory/models.py
-make cli-gen-all MOD=inventory CN=库存管理    # generate backend + frontend CRUD
-# i18n is written to web/src/locales/langs/_generated/inventory/ and consumed automatically (no manual merge)
-make mm                                      # makemigrations + migrate
+make cli-gen-all MOD=inventory CN=库存管理    # generate backend + frontend CRUD (i18n auto-merged)
+make mm                                      # migrate
 make dev
 ```
 

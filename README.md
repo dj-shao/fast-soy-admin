@@ -25,55 +25,53 @@
 
 ## 简介
 
-FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
+开箱即用的全栈后台管理模板，可作为中后台脚手架，也可作为全栈开发参考。
 
 - **后端** — FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **前端** — Vue3 · Vite7 · TypeScript · Naive UI · UnoCSS · Pinia · Alova · Elegant Router
 - **基础设施** — Docker Compose（Nginx + FastAPI + Redis）、多 worker 启动锁、fastapi-guard 限流、内置 Radar 监控面板
-- **代码生成器** — `make cli-init` 建骨架 → 编辑 `models.py` → `make cli-gen-all` 一键产出后端 + 前端 CRUD（i18n 由 `_generated/<module>/` 自动并入语言包，无需手工合并）
-
-适合作为中后台项目脚手架，也适合作为全栈开发参考。
+- **代码生成器** — `cli-init` 起骨架，编辑 `models.py`，`cli-gen-all` 一键产出前后端 CRUD
 
 ## 特性
 
 **AI 驱动**
 
-- **AI Coding 友好** — 仓库内置 [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md)，把架构约定、分层职责、API 规范、响应码表、PR checklist 一次性喂给 Claude Code / Cursor / Copilot 等智能体，AI 能直接按项目规范产出代码，不再"自由发挥"
-- **生成器即 AI 工作面** — `make cli-gen-all` 把"加一张表"的样板压缩为单条命令，AI 只需关注 `models.py` 的业务建模与覆写差异，剩余 90% 模板由 CLI 完成
+- **AI Coding 友好** — 内置 [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md)，把架构约定、分层职责、API 规范、响应码、PR checklist 一次喂给 Claude Code / Cursor / Copilot，AI 直接按项目规范产出代码
+- **生成器即 AI 工作面** — `cli-gen-all` 把"加一张表"压成单条命令，AI 只关注 `models.py` 与覆写差异，其余模板由 CLI 完成
 
 **工程效率**
 
-- **CLI 端到端生成** — `make cli-init` 起骨架，`make cli-gen-all` 从 Tortoise 模型一键产出后端 schemas / controllers / api + 前端 views / service / typings / i18n，分钟级交付一张表
-- **CRUDRouter + `@crud.override`** — 标准 6 路由（list / search / get / create / patch / delete）由工厂统一生成，差异部分按需覆写；同时显式划定"聚合根禁用"边界，避免抽象上瘾
+- **CLI 端到端生成** — 一条命令从 Tortoise 模型产出后端 schemas / controllers / api + 前端 views / service / typings / i18n
+- **CRUDRouter + `@crud.override`** — 工厂生成 6 条标准路由，按需覆写差异；显式划定"聚合根禁用"边界，避免抽象上瘾
 
 **可扩展架构**
 
-- **业务模块自动发现** — `app/business/<name>/` 放进去就自动注册路由、模型、初始化数据；模块互不耦合，跨模块仅通过事件总线（`emit` / `on`）通信
-- **多库友好** — 业务模块可声明独立 `DB_URL` 注册成 `conn_<biz>`；事务一律 `in_transaction(get_db_conn(Model))`，不硬编码连接名
-- **多 worker 启动协调** — Redis leader 锁串行执行 `init_menus → refresh_api_list → init_data → refresh_cache`，K8s 多副本无重复对账
+- **业务模块自动发现** — 放进 `app/business/<name>/` 即自动注册路由、模型、初始化数据；模块解耦，跨模块走事件总线（`emit` / `on`）
+- **多库友好** — 业务模块可声明独立 `DB_URL` 注册为 `conn_<biz>`；事务统一 `in_transaction(get_db_conn(Model))`
+- **多 worker 启动协调** — Redis leader 锁串行 `init_menus → refresh_api_list → init_data → refresh_cache`，K8s 多副本无重复对账
 
 **安全与权限**
 
-- **三层 RBAC + 行级 `data_scope`** — 菜单 / API / 按钮三层鉴权，叠加 `all / department / self / custom` 数据范围；按钮权限下沉到 service，杜绝"前端隐藏即安全"
-- **菜单/角色 IaC 对账** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` 三档语义，明确哪些子树是代码声明、哪些允许 UI 自由创建
-- **Sqid 对外 ID** — 自增 ID 全程不出库，防遍历枚举，对外契约稳定
+- **三层 RBAC + 行级 `data_scope`** — 菜单 / API / 按钮三层鉴权 + `all / department / self / custom` 数据范围；按钮校验下沉 service
+- **菜单/角色 IaC 对账** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` 三档语义，区分代码声明子树与 UI 可自由创建子树
+- **Sqid 对外 ID** — 自增 ID 不出库，防遍历枚举
 
 **契约与类型**
 
-- **统一响应** — 所有接口返回 `{code, msg, data}`，HTTP 状态恒 200，snake_case ↔ camelCase 自动转换；业务异常用 `BizError` 穿透，每个失败场景一个唯一码
+- **统一响应** — `{code, msg, data}` + HTTP 200 + camelCase 自动转换；业务异常用 `BizError` 穿透，每个失败场景一个唯一码
 - **全栈类型安全** — 后端 basedpyright（standard）+ 前端 vue-tsc，CI 强制全绿
-- **i18n 静态可校验** — 代码生成器产出的 i18n 经 `import.meta.glob` 自动并入语言包，借 TypeScript declaration merging 注入 `App.I18n.GeneratedPages`，`$t` 键空间可被静态校验
+- **i18n 静态可校验** — 生成器输出经 `import.meta.glob` 自动并入语言包，`App.I18n.GeneratedPages` 让 `$t` 键被 vue-tsc 校验
 
 **可观测与稳定性**
 
-- **内置 Radar 面板** — `/manage/radar/*` 实时查看请求 / SQL / 异常 / 权限拒绝日志，自带审计能力
-- **fastapi-guard 限流 + IP 封禁** — 暴力破解、扫描自动拦截
-- **Redis 缓存 + 降级** — 角色权限 / 常量路由 / token_version 全走缓存，Redis 故障自动回落数据库
+- **内置 Radar 面板** — `/manage/radar/*` 实时面板：请求 / SQL / 异常 / 权限拒绝
+- **fastapi-guard** — 限流 + IP 封禁，暴力破解、扫描自动拦截
+- **Redis 缓存 + 降级** — 角色权限 / 常量路由 / token_version 缓存优先，Redis 故障回落 DB
 - **状态机 / 事件总线** — 工单、审批、订单等状态流转开箱即用
 
 **部署**
 
-- **Docker 一键部署** — Nginx + FastAPI + Redis 编排好；`docker compose up -d` 即可上线
+- **Docker 一键部署** — Nginx + FastAPI + Redis 编排好，`docker compose up -d` 即上线
 
 ## 相关链接
 
@@ -88,10 +86,10 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
 
 | 分支 | 用途 |
 | --- | --- |
-| `main` | 默认分支，**带示例**（`app/business/hr/` 员工 / 部门 / 标签全套参考实现） |
-| `slim` | 纯净模板骨架，不含任何业务示例模块（即将提供，便于直接在其上起新项目） |
+| `main` | 默认分支，带 HR 示例（`app/business/hr/` 员工 / 部门 / 标签） |
+| `slim` | 纯净骨架，无业务示例（整理中） |
 
-> `slim` 分支还在整理中。当前如需无示例起步，可直接删除 `app/business/hr/` 再启动，autodiscover 会自动跳过。
+> 临时无示例起步：删除 `app/business/hr/` 即可，autodiscover 会自动跳过。
 
 ## 快速开始
 
@@ -115,7 +113,7 @@ docker compose restart app
 
 访问 `http://localhost:1880`。
 
-> 启动时**不会**自动迁移。容器内 SQLite 默认**未挂卷**，生产请切外部数据库或为 `app_system.sqlite3` 挂卷。详见 [部署文档](https://sleep1223.github.io/fast-soy-admin-docs/backend/deployment)。
+> 启动**不会**自动迁移；容器内 SQLite **未挂卷**，生产请切外部数据库或挂卷 `app_system.sqlite3`。详见 [部署文档](https://sleep1223.github.io/fast-soy-admin-docs/backend/deployment)。
 
 ### 本地开发
 
@@ -129,7 +127,7 @@ make dev             # 并行启动后端(:9999) + 前端(:9527)，Ctrl+C 一起
 
 ## 常用命令
 
-项目通过 `Makefile` 封装全部常用命令，运行 `make help` 查看完整列表。
+全部命令封装在 `Makefile`，运行 `make help` 查看完整列表。
 
 | 命令                                   | 作用                                             |
 | -------------------------------------- | ------------------------------------------------ |
@@ -149,13 +147,12 @@ make dev             # 并行启动后端(:9999) + 前端(:9527)，Ctrl+C 一起
 以 `inventory`（库存管理）为例：
 
 ```bash
-make cli-init MOD=inventory                      # 1. 创建模块骨架（仅 models.py）
+make cli-init MOD=inventory                      # 1. 创建模块骨架
 $EDITOR app/business/inventory/models.py         # 2. 定义 Tortoise 模型
-make cli-gen-all MOD=inventory CN=库存管理       # 3. 同时生成后端 + 前端 CRUD
-# 4. 把 web/src/locales/langs/_generated/inventory/ 三个 .md 片段合并到对应源文件
-make mm                                          # 5. 执行迁移
-make dev                                         # 6. 启动验证
-make check-all                                   # 7. 提交前
+make cli-gen-all MOD=inventory CN=库存管理       # 3. 生成前后端 CRUD（i18n 自动并入）
+make mm                                          # 4. 迁移
+make dev                                         # 5. 启动验证
+make check-all                                   # 6. 提交前检查
 ```
 
 完整流程与字段类型映射见 [开发指南](https://sleep1223.github.io/fast-soy-admin-docs/backend/development)。
@@ -179,13 +176,13 @@ web/src/
 └── locales/       # vue-i18n
 ```
 
-分层：`api/` → `services/` → `controllers/` → `models + schemas`。业务模块**不得**反向 import `app.system.*`（少数显式暴露的 service 除外），**不得**互相 import 兄弟模块——跨模块走事件总线。详见 [架构](https://sleep1223.github.io/fast-soy-admin-docs/backend/architecture)。
+分层：`api/` → `services/` → `controllers/` → `models + schemas`。业务模块**禁止**反向 import `app.system.*`（少数显式暴露的 service 除外），**禁止**互相 import；跨模块走事件总线。详见 [架构](https://sleep1223.github.io/fast-soy-admin-docs/backend/architecture)。
 
 ## 切换数据库
 
-修改 `.env` 的 `DB_URL`，运行 `make initdb` 即可。原生支持 SQLite / PostgreSQL / MySQL / SQL Server。
+修改 `.env` 中的 `DB_URL`，运行 `make initdb`。支持 SQLite / PostgreSQL / MySQL / SQL Server。
 
-默认安装仅含 **SQLite** 驱动；切换到其它数据库需安装对应 extra：
+默认仅装 SQLite 驱动，其他数据库按需安装：
 
 ```bash
 uv sync --extra postgres     # PostgreSQL (asyncpg)
@@ -194,29 +191,29 @@ uv sync --extra mssql        # SQL Server (asyncodbc)
 uv sync --extra oracle       # Oracle (asyncodbc)
 ```
 
-业务模块也可在自己的 `config.py` 声明独立 `DB_URL`，autodiscover 会注册为独立连接 `conn_<biz>`，跨模型事务用 `get_db_conn(Model)` 取连接名。详见 [切换数据库](https://sleep1223.github.io/fast-soy-admin-docs/backend/database)。
+业务模块可在自己的 `config.py` 声明独立 `DB_URL`，autodiscover 会注册为 `conn_<biz>`；跨模型事务用 `get_db_conn(Model)` 取连接名。详见 [切换数据库](https://sleep1223.github.io/fast-soy-admin-docs/backend/database)。
 
 ## 响应码
 
-所有接口返回 `{"code": "xxxx", "msg": "...", "data": ...}`，HTTP 状态恒 200。码段约定：
+所有接口返回 `{"code": "xxxx", "msg": "...", "data": ...}`，HTTP 状态恒 200。
 
-| 段          | 含义                                           | 前端典型行为             |
-| ----------- | ---------------------------------------------- | ------------------------ |
-| `0000`      | 成功                                           | 正常处理                 |
-| `1xxx`      | 系统内部错误（异常、入参 / 响应序列化）         | 框架自动弹错             |
-| `21xx`      | 认证失败（token 缺失 / 过期 / session 失效）    | 登出 / 弹窗 / 自动刷新   |
-| `22xx`      | 授权失败（RBAC / 按钮 / 角色 / 超管）           | 显示错误消息             |
-| `23xx`      | 资源冲突（唯一键）                             | 显示错误消息             |
-| `24xx`      | 通用业务失败                                   | 显示错误消息             |
-| `25xx`      | 限流 / 安全策略                                | 显示错误消息             |
-| `26xx`      | Schema 必填兜底                                | 显示错误消息             |
-| `4000–9999` | 用户自定义（业务模块码统一从 `4000` 起；HR 模块示例：`4000–4007`） | 业务自行处理 |
+| 段          | 含义                                | 前端典型行为             |
+| ----------- | ----------------------------------- | ------------------------ |
+| `0000`      | 成功                                | 正常处理                 |
+| `1xxx`      | 系统内部错误 / 序列化失败            | 框架自动弹错             |
+| `21xx`      | 认证失败（token / session）         | 登出 / 弹窗 / 自动刷新   |
+| `22xx`      | 授权失败（RBAC / 按钮 / 角色）       | 显示错误消息             |
+| `23xx`      | 资源冲突（唯一键）                   | 显示错误消息             |
+| `24xx`      | 通用业务失败                         | 显示错误消息             |
+| `25xx`      | 限流 / 安全策略                     | 显示错误消息             |
+| `26xx`      | Schema 必填兜底                     | 显示错误消息             |
+| `4000–9999` | 用户自定义（业务模块从 `4000` 起）   | 业务自行处理             |
 
 详细码表见 [响应码文档](https://sleep1223.github.io/fast-soy-admin-docs/backend/codes)。
 
 ## 前端代码同步
 
-`web/` 目录的源码由独立仓库 [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend) 维护，与本仓库**没有共同祖先**。同步上游更新需手动走 `git subtree`，可查阅历史 commit `chore(web): sync with fast-soy-admin-frontend@...`。
+`web/` 由独立仓库 [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend) 维护，与本仓库**无共同祖先**。同步上游需手动 `git subtree`，参考历史 commit `chore(web): sync with fast-soy-admin-frontend@...`。
 
 ## 示例图片
 

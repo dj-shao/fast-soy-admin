@@ -25,50 +25,48 @@
 
 ## Overview
 
-FastSoyAdmin is a ready-to-use full-stack admin scaffold:
+A batteries-included full-stack admin template — usable as an internal-tools scaffold and as a reference for modern full-stack development.
 
 - **Backend** — FastAPI · Pydantic v2 · Tortoise ORM · Redis
 - **Frontend** — Vue3 · Vite7 · TypeScript · Naive UI · UnoCSS · Pinia · Alova · Elegant Router
-- **Infra** — Docker Compose (Nginx + FastAPI + Redis), multi-worker startup lock, fastapi-guard rate limiting, built-in Radar dashboard
-- **Code generator** — `make cli-init` to scaffold, write `models.py`, `make cli-gen-all` to emit backend + frontend CRUD (i18n is auto-merged from `_generated/<module>/`; no manual edits to the language packs)
-
-Great as a starting point for internal tools, and as a reference for modern full-stack development.
+- **Infra** — Docker Compose (Nginx + FastAPI + Redis), multi-worker startup lock, fastapi-guard, built-in Radar dashboard
+- **Code generator** — `cli-init` to scaffold, write `models.py`, `cli-gen-all` to emit backend + frontend CRUD
 
 ## Highlights
 
 **AI-native**
 
-- **AI-coding friendly** — ships with [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md) so Claude Code / Cursor / Copilot get the full architecture, layering rules, API conventions, response codes, and PR checklist up front. Agents produce code that matches project conventions out of the box instead of improvising.
-- **Generators as the AI workbench** — `make cli-gen-all` collapses "add one table" into a single command; the agent only owns the business model in `models.py` and any override diffs, the remaining 90% boilerplate is emitted by the CLI.
+- **AI-coding friendly** — ships with [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md) feeding Claude Code / Cursor / Copilot the full architecture, layering rules, API conventions, response codes and PR checklist; agents produce code that matches project conventions out of the box
+- **Generator as the AI workbench** — `cli-gen-all` collapses "add a table" into one command; the agent only owns `models.py` and override diffs, the rest is emitted by the CLI
 
 **Engineering velocity**
 
-- **End-to-end CLI generation** — `make cli-init` scaffolds the module, `make cli-gen-all` turns a Tortoise model into full backend (schemas / controllers / api) + frontend (views / service / typings / i18n) CRUD in minutes
-- **CRUDRouter + `@crud.override`** — the factory emits the 6 standard routes (list / search / get / create / patch / delete); only override the diffs. Hard limits are documented to prevent abstraction bloat (aggregate roots stay explicit)
+- **End-to-end CLI codegen** — one command turns a Tortoise model into full backend (schemas / controllers / api) + frontend (views / service / typings / i18n) CRUD
+- **CRUDRouter + `@crud.override`** — the factory emits 6 standard routes; only override diffs. "No aggregate roots" boundary is explicit to prevent abstraction bloat
 
 **Extensible architecture**
 
-- **Autodiscovered business modules** — drop a package into `app/business/<name>/` and routes, models, and init data register themselves. Modules are decoupled; cross-module communication goes through the event bus (`emit` / `on`)
-- **Multi-database friendly** — modules can declare their own `DB_URL` and get a dedicated `conn_<biz>`; transactions always go through `in_transaction(get_db_conn(Model))`, never hard-coded connection names
+- **Autodiscovered modules** — drop a package into `app/business/<name>/` and routes, models, and init data register themselves; modules are decoupled, cross-module talk goes via the event bus (`emit` / `on`)
+- **Multi-database friendly** — modules can declare their own `DB_URL` and get a dedicated `conn_<biz>`; transactions always go through `in_transaction(get_db_conn(Model))`
 - **Multi-worker startup coordination** — a Redis leader lock serializes `init_menus → refresh_api_list → init_data → refresh_cache`, so K8s replicas don't double-reconcile
 
 **Security & permissions**
 
-- **Three-tier RBAC + row-level `data_scope`** — menu / API / button checks, plus `all / department / self / custom` data scope. Button permissions are enforced in services, not by hiding UI
+- **Three-tier RBAC + row-level `data_scope`** — menu / API / button checks plus `all / department / self / custom` data scope; button checks live in services, not just in UI
 - **Menu / role IaC reconciliation** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` give three explicit semantics so you know which subtrees are code-owned and which are user-editable
-- **Sqid public IDs** — auto-increment IDs never leak; safe against enumeration, contracts stay stable
+- **Sqid public IDs** — auto-increment IDs never leak; enumeration-safe
 
 **Contracts & typing**
 
-- **Unified responses** — every endpoint returns `{code, msg, data}` with HTTP status always 200, snake_case ↔ camelCase auto-conversion; business errors propagate as `BizError`, each failure scenario gets a unique code
+- **Unified responses** — `{code, msg, data}` with HTTP 200 + snake_case ↔ camelCase; `BizError` propagates business failures with unique codes
 - **End-to-end type safety** — basedpyright (standard) on the backend, vue-tsc on the frontend, both gated in CI
-- **Statically checked i18n** — generator output is merged via `import.meta.glob` and TypeScript declaration merging injects `App.I18n.GeneratedPages`, so `$t` keys are validated by `vue-tsc`
+- **Statically checked i18n** — generator output merges via `import.meta.glob`; `App.I18n.GeneratedPages` lets `vue-tsc` validate every `$t` key
 
 **Observability & resilience**
 
-- **Built-in Radar dashboard** — `/manage/radar/*` shows request / SQL / exception / permission-deny logs in real time
-- **fastapi-guard rate limiting + IP banning** — brute-force and scanner traffic gets blocked automatically
-- **Redis cache + graceful fallback** — role permissions, constant routes, and `token_version` are cached; if Redis is down, queries fall back to the DB
+- **Built-in Radar dashboard** — `/manage/radar/*` for real-time request / SQL / exception / permission-deny logs
+- **fastapi-guard** — rate limiting + IP banning; blocks brute-force and scanner traffic automatically
+- **Redis cache + graceful fallback** — role permissions, constant routes and `token_version` are cached; queries fall back to the DB if Redis is down
 - **State machine / event bus** — first-class primitives for workflows like tickets, approvals, orders
 
 **Deployment**
@@ -88,10 +86,10 @@ Great as a starting point for internal tools, and as a reference for modern full
 
 | Branch | Purpose |
 | --- | --- |
-| `main` | Default branch, **includes examples** (`app/business/hr/` — a full reference module: employees / departments / tags) |
-| `slim` | Clean template skeleton with no business example modules (coming soon — easier starting point for a fresh project) |
+| `main` | Default; includes the HR example (`app/business/hr/` — employees / departments / tags) |
+| `slim` | Clean skeleton with no business examples (in preparation) |
 
-> `slim` is still in preparation. For now, if you want a clean start, simply delete `app/business/hr/` before launching — autodiscover will skip it.
+> Want a clean start now? Delete `app/business/hr/` before launching — autodiscover will skip it.
 
 ## Getting Started
 
@@ -115,7 +113,7 @@ docker compose restart app
 
 Open `http://localhost:1880`.
 
-> Migrations do **not** run automatically at startup. The container's SQLite file is **not** volume-mounted by default — for production, switch to an external DB or mount a volume for `app_system.sqlite3`. See the [deployment guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/deployment).
+> Migrations do **not** run automatically; the container's SQLite is **not** volume-mounted by default. For production, switch to an external DB or mount a volume for `app_system.sqlite3`. See the [deployment guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/deployment).
 
 ### Local development
 
@@ -129,7 +127,7 @@ make dev             # backend (:9999) + frontend (:9527) in parallel, Ctrl+C st
 
 ## Common Commands
 
-All frequently used commands are wrapped in `Makefile`. Run `make help` for the full list.
+All commands are wrapped in `Makefile`. Run `make help` for the full list.
 
 | Command                                | Purpose                                               |
 | -------------------------------------- | ----------------------------------------------------- |
@@ -146,19 +144,16 @@ See the [commands reference](https://sleep1223.github.io/fast-soy-admin-docs/en/
 
 ## Adding a new business module
 
-End-to-end example for an `inventory` module:
-
 ```bash
-make cli-init MOD=inventory                       # 1. scaffold (models.py only)
+make cli-init MOD=inventory                       # 1. scaffold the module
 $EDITOR app/business/inventory/models.py          # 2. define Tortoise models
-make cli-gen-all MOD=inventory CN=Inventory       # 3. generate backend + frontend CRUD
-# 4. merge the three .md i18n stubs under web/src/locales/langs/_generated/inventory/
-make mm                                           # 5. run migrations
-make dev                                          # 6. verify
-make check-all                                    # 7. pre-commit
+make cli-gen-all MOD=inventory CN=Inventory       # 3. generate backend + frontend CRUD (i18n auto-merged)
+make mm                                           # 4. run migrations
+make dev                                          # 5. verify
+make check-all                                    # 6. pre-commit
 ```
 
-Full walkthrough and field type mappings: [Development guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/development).
+Walkthrough and field type mappings: [Development guide](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/development).
 
 ## Architecture
 
@@ -179,13 +174,13 @@ web/src/
 └── locales/       # vue-i18n
 ```
 
-Layers: `api/` → `services/` → `controllers/` → `models + schemas`. Business modules must **not** reverse-import `app.system.*` (except for a few explicitly exposed services) and must **not** import sibling modules — cross-module communication uses the event bus. See [architecture](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/architecture).
+Layers: `api/` → `services/` → `controllers/` → `models + schemas`. Business modules **must not** reverse-import `app.system.*` (except a few explicitly exposed services) and **must not** import sibling modules — cross-module talk uses the event bus. See [architecture](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/architecture).
 
 ## Switching databases
 
-Change `DB_URL` in `.env` and run `make initdb`. SQLite / PostgreSQL / MySQL / SQL Server are supported out of the box.
+Change `DB_URL` in `.env` and run `make initdb`. SQLite / PostgreSQL / MySQL / SQL Server supported.
 
-Only the **SQLite** driver is installed by default; switching to another database requires installing the matching extra:
+Only the SQLite driver ships by default; install extras as needed:
 
 ```bash
 uv sync --extra postgres     # PostgreSQL (asyncpg)
@@ -194,29 +189,29 @@ uv sync --extra mssql        # SQL Server (asyncodbc)
 uv sync --extra oracle       # Oracle (asyncodbc)
 ```
 
-A business module can also declare its own `DB_URL` in its `config.py`; autodiscover registers it as a dedicated connection `conn_<biz>`. For cross-model transactions, use `get_db_conn(Model)` to pick the correct connection. See [switch database](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/database).
+A module can declare its own `DB_URL` in `config.py`; autodiscover registers it as `conn_<biz>`. For cross-model transactions, use `get_db_conn(Model)` to pick the connection. See [switch database](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/database).
 
 ## Response Codes
 
-All endpoints share the shape `{"code": "xxxx", "msg": "...", "data": ...}` with HTTP status always 200. Code ranges:
+All endpoints return `{"code": "xxxx", "msg": "...", "data": ...}` with HTTP status always 200.
 
-| Range       | Meaning                                         | Typical frontend behavior          |
-| ----------- | ----------------------------------------------- | ---------------------------------- |
-| `0000`      | Success                                         | Normal processing                  |
-| `1xxx`      | Internal errors (validation, DB, serialization) | Auto-toasted by the framework      |
-| `21xx`      | Authentication failure                          | Logout / modal / auto token refresh |
-| `22xx`      | Authorization failure (RBAC / button / role / super-admin) | Show error toast        |
-| `23xx`      | Resource conflict (unique constraint)           | Show error toast                   |
-| `24xx`      | Generic business failure                        | Show error toast                   |
-| `25xx`      | Rate-limit / security                           | Show error toast                   |
-| `26xx`      | Schema required-field fallback                  | Show error toast                   |
-| `4000–9999` | User-defined (business module codes start at `4000`; HR sample: `4000–4007`) | Handled by callers |
+| Range       | Meaning                                  | Typical frontend behavior           |
+| ----------- | ---------------------------------------- | ----------------------------------- |
+| `0000`      | Success                                  | Normal processing                   |
+| `1xxx`      | Internal / serialization error           | Auto-toasted by the framework       |
+| `21xx`      | Auth failure (token / session)           | Logout / modal / auto token refresh |
+| `22xx`      | Authorization failure (RBAC / button)    | Show error toast                    |
+| `23xx`      | Resource conflict (unique constraint)    | Show error toast                    |
+| `24xx`      | Generic business failure                 | Show error toast                    |
+| `25xx`      | Rate-limit / security                    | Show error toast                    |
+| `26xx`      | Schema required-field fallback           | Show error toast                    |
+| `4000–9999` | User-defined (modules start at `4000`)   | Handled by callers                  |
 
 See [response codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/codes).
 
 ## Frontend sync
 
-`web/` is maintained in a separate repository, [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend), which has **no common ancestor** with this repo. Upstream sync is a manual `git subtree` workflow — see the commits prefixed with `chore(web): sync with fast-soy-admin-frontend@...`.
+`web/` is maintained in a separate repo, [fast-soy-admin-frontend](https://github.com/sleep1223/fast-soy-admin-frontend), with **no common ancestor**. Upstream sync is a manual `git subtree` workflow — see commits prefixed `chore(web): sync with fast-soy-admin-frontend@...`.
 
 ## Screenshots
 
@@ -238,7 +233,7 @@ See [response codes](https://sleep1223.github.io/fast-soy-admin-docs/en/backend/
 
 ## Contributing
 
-[Pull requests](https://github.com/sleep1223/fast-soy-admin/pulls) and [issues](https://github.com/sleep1223/fast-soy-admin/issues/new) are both welcome.
+[Pull requests](https://github.com/sleep1223/fast-soy-admin/pulls) and [issues](https://github.com/sleep1223/fast-soy-admin/issues/new) welcome.
 
 <a href="https://github.com/sleep1223/fast-soy-admin/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=sleep1223/fast-soy-admin" />
