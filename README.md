@@ -36,42 +36,42 @@
 
 **AI 驱动**
 
-- **AI Coding 友好** — 内置 [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md)，把架构约定、分层职责、API 规范、响应码、PR checklist 一次喂给 Claude Code / Cursor / Copilot，AI 直接按项目规范产出代码
-- **生成器即 AI 工作面** — `cli-gen-all` 把"加一张表"压成单条命令，AI 只关注 `models.py` 与覆写差异，其余模板由 CLI 完成
+- **AI Coding 友好** — 内置 [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md)，AI 按项目规范产出代码
+- **生成器即 AI 工作面** — `cli-gen-all` 一键加表，AI 只关注 `models.py` 与覆写差异
 
 **工程效率**
 
-- **CLI 端到端生成** — 一条命令从 Tortoise 模型产出后端 schemas / controllers / api + 前端 views / service / typings / i18n
-- **CRUDRouter + `@crud.override`** — 工厂生成 6 条标准路由，按需覆写差异；显式划定"聚合根禁用"边界，避免抽象上瘾
+- **CLI 端到端生成** — 从 Tortoise 模型一键产出前后端 CRUD（schemas / controllers / api + views / service / typings / i18n）
+- **CRUDRouter + `@crud.override`** — 工厂生成 6 条标准路由，按需覆写
 
 **可扩展架构**
 
-- **业务模块自动发现** — 放进 `app/business/<name>/` 即自动注册路由、模型、初始化数据；模块解耦，跨模块走事件总线（`emit` / `on`）
-- **多库友好** — 业务模块可声明独立 `DB_URL` 注册为 `conn_<biz>`；事务统一 `in_transaction(get_db_conn(Model))`
-- **多 worker 启动协调** — Redis leader 锁串行 `init_menus → refresh_api_list → init_data → refresh_cache`，K8s 多副本无重复对账
+- **业务模块自动发现** — 放进 `app/business/<name>/` 即自动注册；跨模块走事件总线（`emit` / `on`）
+- **多库友好** — 业务模块可声明独立 `DB_URL`，事务用 `in_transaction(get_db_conn(Model))`
+- **多 worker 启动协调** — Redis leader 锁串行初始化，K8s 多副本无重复对账
 
 **安全与权限**
 
-- **三层 RBAC + 行级 `data_scope`** — 菜单 / API / 按钮三层鉴权 + `all / department / self / custom` 数据范围；按钮校验下沉 service
-- **菜单/角色 IaC 对账** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` 三档语义，区分代码声明子树与 UI 可自由创建子树
-- **Sqid 对外 ID** — 自增 ID 不出库，防遍历枚举
+- **三层 RBAC + 行级 `data_scope`** — 菜单 / API / 按钮 + `all / department / self / custom`
+- **菜单/角色 IaC 对账** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` 三档语义
+- **Sqid 对外 ID** — 防遍历枚举
 
 **契约与类型**
 
-- **统一响应** — `{code, msg, data}` + HTTP 200 + camelCase 自动转换；业务异常用 `BizError` 穿透，每个失败场景一个唯一码
-- **全栈类型安全** — 后端 basedpyright（standard）+ 前端 vue-tsc，CI 强制全绿
-- **i18n 静态可校验** — 生成器输出经 `import.meta.glob` 自动并入语言包，`App.I18n.GeneratedPages` 让 `$t` 键被 vue-tsc 校验
+- **统一响应** — `{code, msg, data}` + HTTP 200 + camelCase；业务异常用 `BizError` 穿透
+- **全栈类型安全** — 后端 basedpyright + 前端 vue-tsc，CI 强制全绿
+- **i18n 静态可校验** — 生成器输出自动并入语言包，`$t` 键被 vue-tsc 校验
 
 **可观测与稳定性**
 
-- **内置 Radar 面板** — `/manage/radar/*` 实时面板：请求 / SQL / 异常 / 权限拒绝
-- **fastapi-guard** — 限流 + IP 封禁，暴力破解、扫描自动拦截
-- **Redis 缓存 + 降级** — 角色权限 / 常量路由 / token_version 缓存优先，Redis 故障回落 DB
+- **内置 Radar 面板** — 请求 / SQL / 异常 / 权限拒绝
+- **fastapi-guard** — 限流 + IP 封禁
+- **Redis 缓存 + 降级** — Redis 故障自动回落 DB
 - **状态机 / 事件总线** — 工单、审批、订单等状态流转开箱即用
 
 **部署**
 
-- **Docker 一键部署** — Nginx + FastAPI + Redis 编排好，`docker compose up -d` 即上线
+- **Docker 一键部署** — Nginx + FastAPI + Redis，`docker compose up -d` 即上线
 
 ## 相关链接
 
