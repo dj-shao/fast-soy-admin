@@ -36,16 +36,44 @@ FastSoyAdmin 是一套开箱即用的全栈后台管理模板：
 
 ## 特性
 
-- **完整 RBAC** — 菜单 / API / 按钮三层权限 + 行级 `data_scope`（all / department / self / custom），前后端严格分离
-- **模块自动发现** — `app/business/<name>/` 放进去就自动注册路由、模型、初始化数据；业务模块之间互相不耦合，跨模块通过事件总线通信
-- **CLI 代码生成** — 从 Tortoise 模型一键生成 schemas / controllers / api + 前端 views / service / typings / i18n
-- **动态路由** — 菜单 / API / 按钮权限由后端统一管理，用户登录后按角色动态下发
-- **统一响应** — 所有接口返回 `{code, msg, data}`，HTTP 状态恒 200；snake_case ↔ camelCase 自动转换
-- **Redis 缓存** — 角色权限 / 常量路由 / token 版本号全部走缓存，故障时降级到数据库
-- **严格类型** — 前端 vue-tsc、后端 basedpyright（standard 模式），全栈类型安全
-- **国际化** — vue-i18n 中 / 英双语；代码生成器输出的 i18n 文件经 `import.meta.glob` 自动并入语言包，并通过 TypeScript declaration merging 注入 `App.I18n.GeneratedPages`，使 `$t` 键空间可被 `vue-tsc` 静态校验
-- **生产可用** — 内置 Radar 请求 / SQL / 异常追踪、fastapi-guard 限流、Sqids 资源 ID、状态机 / 事件总线
-- **Docker 一键部署** — Nginx + FastAPI + Redis 开箱即用
+**AI 驱动**
+
+- **AI Coding 友好** — 仓库内置 [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md)，把架构约定、分层职责、API 规范、响应码表、PR checklist 一次性喂给 Claude Code / Cursor / Copilot 等智能体，AI 能直接按项目规范产出代码，不再"自由发挥"
+- **生成器即 AI 工作面** — `make cli-gen-all` 把"加一张表"的样板压缩为单条命令，AI 只需关注 `models.py` 的业务建模与覆写差异，剩余 90% 模板由 CLI 完成
+
+**工程效率**
+
+- **CLI 端到端生成** — `make cli-init` 起骨架，`make cli-gen-all` 从 Tortoise 模型一键产出后端 schemas / controllers / api + 前端 views / service / typings / i18n，分钟级交付一张表
+- **CRUDRouter + `@crud.override`** — 标准 6 路由（list / search / get / create / patch / delete）由工厂统一生成，差异部分按需覆写；同时显式划定"聚合根禁用"边界，避免抽象上瘾
+
+**可扩展架构**
+
+- **业务模块自动发现** — `app/business/<name>/` 放进去就自动注册路由、模型、初始化数据；模块互不耦合，跨模块仅通过事件总线（`emit` / `on`）通信
+- **多库友好** — 业务模块可声明独立 `DB_URL` 注册成 `conn_<biz>`；事务一律 `in_transaction(get_db_conn(Model))`，不硬编码连接名
+- **多 worker 启动协调** — Redis leader 锁串行执行 `init_menus → refresh_api_list → init_data → refresh_cache`，K8s 多副本无重复对账
+
+**安全与权限**
+
+- **三层 RBAC + 行级 `data_scope`** — 菜单 / API / 按钮三层鉴权，叠加 `all / department / self / custom` 数据范围；按钮权限下沉到 service，杜绝"前端隐藏即安全"
+- **菜单/角色 IaC 对账** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` 三档语义，明确哪些子树是代码声明、哪些允许 UI 自由创建
+- **Sqid 对外 ID** — 自增 ID 全程不出库，防遍历枚举，对外契约稳定
+
+**契约与类型**
+
+- **统一响应** — 所有接口返回 `{code, msg, data}`，HTTP 状态恒 200，snake_case ↔ camelCase 自动转换；业务异常用 `BizError` 穿透，每个失败场景一个唯一码
+- **全栈类型安全** — 后端 basedpyright（standard）+ 前端 vue-tsc，CI 强制全绿
+- **i18n 静态可校验** — 代码生成器产出的 i18n 经 `import.meta.glob` 自动并入语言包，借 TypeScript declaration merging 注入 `App.I18n.GeneratedPages`，`$t` 键空间可被静态校验
+
+**可观测与稳定性**
+
+- **内置 Radar 面板** — `/manage/radar/*` 实时查看请求 / SQL / 异常 / 权限拒绝日志，自带审计能力
+- **fastapi-guard 限流 + IP 封禁** — 暴力破解、扫描自动拦截
+- **Redis 缓存 + 降级** — 角色权限 / 常量路由 / token_version 全走缓存，Redis 故障自动回落数据库
+- **状态机 / 事件总线** — 工单、审批、订单等状态流转开箱即用
+
+**部署**
+
+- **Docker 一键部署** — Nginx + FastAPI + Redis 编排好；`docker compose up -d` 即可上线
 
 ## 相关链接
 

@@ -36,16 +36,44 @@ Great as a starting point for internal tools, and as a reference for modern full
 
 ## Highlights
 
-- **Complete RBAC** — three permission layers (menu / API / button) + row-level `data_scope` (all / department / self / custom)
-- **Autodiscovered business modules** — drop a package in `app/business/<name>/`; routes, models, and init data register themselves. Modules are decoupled — cross-module communication uses the event bus.
-- **CLI code generation** — turn Tortoise models into full backend + frontend CRUD in one command; generated i18n files merge in via `import.meta.glob` with TypeScript declaration merging keeping `$t` keys statically checked
-- **Dynamic routing** — menu / API / button permissions are managed on the backend; routes are delivered per role after login
-- **Unified responses** — every endpoint returns `{code, msg, data}` with HTTP status always 200; snake_case ↔ camelCase auto-conversion
-- **Redis cache** — role permissions, constant routes, and token versions all cached; falls back to DB on outage
-- **Strict typing** — vue-tsc on the frontend, basedpyright (standard) on the backend
-- **i18n** — vue-i18n zh / en; CLI-emitted module i18n is consumed automatically and `$t` keys are typed via declaration merging
-- **Production-ready** — built-in Radar request / SQL / exception tracing, fastapi-guard, Sqid resource IDs, state machine, event bus
-- **One-command Docker** — Nginx + FastAPI + Redis out of the box
+**AI-native**
+
+- **AI-coding friendly** — ships with [CLAUDE.md](CLAUDE.md) + [llms.txt](llms.txt) / [llms-full.md](llms-full.md) so Claude Code / Cursor / Copilot get the full architecture, layering rules, API conventions, response codes, and PR checklist up front. Agents produce code that matches project conventions out of the box instead of improvising.
+- **Generators as the AI workbench** — `make cli-gen-all` collapses "add one table" into a single command; the agent only owns the business model in `models.py` and any override diffs, the remaining 90% boilerplate is emitted by the CLI.
+
+**Engineering velocity**
+
+- **End-to-end CLI generation** — `make cli-init` scaffolds the module, `make cli-gen-all` turns a Tortoise model into full backend (schemas / controllers / api) + frontend (views / service / typings / i18n) CRUD in minutes
+- **CRUDRouter + `@crud.override`** — the factory emits the 6 standard routes (list / search / get / create / patch / delete); only override the diffs. Hard limits are documented to prevent abstraction bloat (aggregate roots stay explicit)
+
+**Extensible architecture**
+
+- **Autodiscovered business modules** — drop a package into `app/business/<name>/` and routes, models, and init data register themselves. Modules are decoupled; cross-module communication goes through the event bus (`emit` / `on`)
+- **Multi-database friendly** — modules can declare their own `DB_URL` and get a dedicated `conn_<biz>`; transactions always go through `in_transaction(get_db_conn(Model))`, never hard-coded connection names
+- **Multi-worker startup coordination** — a Redis leader lock serializes `init_menus → refresh_api_list → init_data → refresh_cache`, so K8s replicas don't double-reconcile
+
+**Security & permissions**
+
+- **Three-tier RBAC + row-level `data_scope`** — menu / API / button checks, plus `all / department / self / custom` data scope. Button permissions are enforced in services, not by hiding UI
+- **Menu / role IaC reconciliation** — `ensure_menu` / `reconcile_menu_subtree` / `refresh_api_list` give three explicit semantics so you know which subtrees are code-owned and which are user-editable
+- **Sqid public IDs** — auto-increment IDs never leak; safe against enumeration, contracts stay stable
+
+**Contracts & typing**
+
+- **Unified responses** — every endpoint returns `{code, msg, data}` with HTTP status always 200, snake_case ↔ camelCase auto-conversion; business errors propagate as `BizError`, each failure scenario gets a unique code
+- **End-to-end type safety** — basedpyright (standard) on the backend, vue-tsc on the frontend, both gated in CI
+- **Statically checked i18n** — generator output is merged via `import.meta.glob` and TypeScript declaration merging injects `App.I18n.GeneratedPages`, so `$t` keys are validated by `vue-tsc`
+
+**Observability & resilience**
+
+- **Built-in Radar dashboard** — `/manage/radar/*` shows request / SQL / exception / permission-deny logs in real time
+- **fastapi-guard rate limiting + IP banning** — brute-force and scanner traffic gets blocked automatically
+- **Redis cache + graceful fallback** — role permissions, constant routes, and `token_version` are cached; if Redis is down, queries fall back to the DB
+- **State machine / event bus** — first-class primitives for workflows like tickets, approvals, orders
+
+**Deployment**
+
+- **One-command Docker** — Nginx + FastAPI + Redis pre-wired; `docker compose up -d` and you're live
 
 ## Links
 
